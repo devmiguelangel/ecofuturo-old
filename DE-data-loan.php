@@ -1,3 +1,11 @@
+<?php
+
+require_once 'sibas-db.class.php';
+$link = new SibasDB();
+$tcm = $link->get_rate_exchange(true);
+
+?>
+
 <script type="text/javascript">
 $(document).ready(function(e) {
 	$("#fde-loan").validateForm({
@@ -9,84 +17,9 @@ $(document).ready(function(e) {
 		radioClass: 'iradio_square-red',
 		increaseArea: '20%' // optional
 	});
-	
-	$('#dl-amount').keyup(function(){
-		/*
-		var amount = parseFloat($('#dl-amount').prop('value'));
-		var tcm = parseFloat($('#tcm').prop('value'));
-		var converted = 0;
-		if($('#dl-currency-bs').is(':checked')) { 
-		     converted = amount;
-		}else if($('#dl-currency-usd').is(':checked')) { 
-		     converted = amount * tcm;
-		}
-		if(converted<=(5000*tcm)){
-			$('#dl-vg option').not(":selected").attr("disabled", false);
-			$('#dl-vg option').each(function(index) {
-				var option = $(this).prop('value');
-				if (option == 1) {
-					$(this).prop('selected', true);
-				}
-			});
-			$('#dl-vg option').not(":selected").attr("disabled", true);
-	    }else if(converted>(5000*tcm)){
-			$('#dl-vg option').not(":selected").attr("disabled", false);
-			$('#dl-vg option').each(function(index) {
-				var option = $(this).prop('value');
-				if (option == '') {
-					$(this).prop('selected', true);
-				}
-			});
-			$('#dl-vg option').not(":selected").attr("disabled", false);
-		}
-		*/
-	});
-		
-	$('input[name="dl-currency"]').on('ifClicked', function(e){
-	    /*
-		var rd = $(this).prop('value');
-		var amount = parseFloat($('#dl-amount').prop('value'));
-		var tcm = parseFloat($('#tcm').prop('value'));
-		var converted = 0;
-		//alert(amount+' '+tcm+' '+rd);
-		if(amount>0){
-			if(rd=='BS'){
-			   converted = amount;
-			}else if(rd=='USD'){
-			   converted = amount * tcm;
-			}
-			if(converted<=(5000*tcm)){
-				$('#dl-vg option').not(":selected").attr("disabled", false);
-				$('#dl-vg option').each(function(index) {
-					var option = $(this).prop('value');
-					if (option == 1) {
-						$(this).prop('selected', true);
-					}
-				});
-				$('#dl-vg option').not(":selected").attr("disabled", true);
-			}else if(converted>(5000*tcm)){
-				$('#dl-vg option').not(":selected").attr("disabled", false);
-				$('#dl-vg option').each(function(index) {
-					var option = $(this).prop('value');
-					if (option == '') {
-						$(this).prop('selected', true);
-					}
-				});
-				$('#dl-vg option').not(":selected").attr("disabled", false);
-			}
-		}else{
-			$('#dl-vg option[value=""]').prop('selected',true);
-		}
-		*/
-	});
-				
 });
 </script>
-<?php
-require_once('sibas-db.class.php');
-$link = new SibasDB();
-$tcm = $link->get_rate_exchange(true);
-?>
+
 <h3>Datos del Prestamo</h3>
 <form id="fde-loan" name="fde-loan" action="" method="post" class="form-quote">
 	<label>Tipo de Cobertura: <span>*</span></label>
@@ -184,64 +117,8 @@ if($link->multi_query($sqlPr) === TRUE){
 	}
 }
 
-if ($link->verifyModality($_SESSION['idEF'], 'DE') === true) {
-?>
-<script type="text/javascript">
-$(document).ready(function(){
-	$('#dl-product').change(function() {
-		var product = $(this).find(':selected').text();
-		$('#dl-modality option').not(":selected").attr("disabled", false);
-		if ('VIVIENDA' === product) {
-			$('#dl-modality option').each(function(index) {
-				var option = $(this).prop('value');
-				var value = option.split('|');
-				if (value[1] === 'CD') {
-					$(this).prop('selected', true);
-				}
-			});
-			
-			$('#dl-modality option').not(":selected").attr("disabled", true);
-		}else if('OTROS' === product){ 
-	        $('#dl-modality option').each(function(index) {
-				var option = $(this).prop('value');
-				var value = option.split('|');
-				if (value[1] === 'CC') {
-					$(this).prop('selected', true);
-				}
-			});
-			
-			$('#dl-modality option').not(":selected").attr("disabled", true);
-		}else {
-			$('#dl-modality').prop('value', '');
-		}
-	});
-});
-</script>
-	<br />
-	<label>Modalidad: <span>*</span></label>
-	<div class="content-input">
-		<select id="dl-modality" name="dl-modality" class="required fbin">
-			<option value="">Seleccione...</option>
-<?php
-	foreach ($link->modDE as $key => $value) {
-		$modality = explode('|', $value);
-		echo '<option value="' . base64_encode($modality[0]) . '|' . $modality[0] .'">' . $modality[1] . '</option>';
-	}
-?>
-		</select>
-	</div>
-<?php
-}
 ?>
     <br/>
-    <label>Requiere Vida Grupo? <span>*</span></label>
-    <div class="content-input">
-        <select id="dl-vg" name="dl-vg" class="required fbin">
-			<option value="">Seleccione...</option>
-            <option value="1">Si</option>
-            <option value="0">NO</option>
-        </select>
-    </div>
     
 	<input type="hidden" id="ms" name="ms" value="<?=$_GET['ms'];?>">
 	<input type="hidden" id="page" name="page" value="<?=$_GET['page'];?>">

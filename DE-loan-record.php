@@ -19,7 +19,7 @@ if($token === false){
 	}
 }
 
-if(isset($_POST['ms']) && isset($_POST['page']) && isset($_POST['pr'])){
+if (isset($_POST['ms']) && isset($_POST['page']) && isset($_POST['pr'])) {
 	$pr = $link->real_escape_string(trim(base64_decode($_POST['pr'])));
 
 	if($pr === 'DE|01'){
@@ -48,9 +48,9 @@ if(isset($_POST['ms']) && isset($_POST['page']) && isset($_POST['pr'])){
 			$record = $link->getRegistrationNumber($_SESSION['idEF'], 'DE', 0);
 			
 			$sql = 'insert into s_de_cot_cabecera
-			(`id_cotizacion`, `no_cotizacion`, `id_ef`, `certificado_provisional`, 
-			`id_prcia`, `id_tc`, `fecha_creacion`, `id_usuario`, `act_usuario`, 
-			`fecha_actualizacion`)
+			(id_cotizacion, no_cotizacion, id_ef, certificado_provisional, 
+			id_prcia, id_tc, fecha_creacion, id_usuario, act_usuario, 
+			fecha_actualizacion)
 			values
 			("'.$idc.'", '.$record.', "'.base64_decode($_SESSION['idEF']).'", 
 			'.$cp.', 1, '.$tc.', curdate(), "'.base64_decode($_SESSION['idUser']).'", 
@@ -64,17 +64,18 @@ if(isset($_POST['ms']) && isset($_POST['page']) && isset($_POST['pr'])){
 			} else{
 				$arrDE[2] = 'No se pudo registrar la Cotización !';
 			}
-		} else{
+		} else {
 			$dl_coverage = $link->real_escape_string(trim($_POST['dl-coverage']));
 			$dl_amount = $link->real_escape_string(trim($_POST['dl-amount']));
 			$dl_currency = $link->real_escape_string(trim($_POST['dl-currency']));
 			$dl_term = $link->real_escape_string(trim($_POST['dl-term']));
 			$dl_type_term = $link->real_escape_string(trim($_POST['dl-type-term']));
-			$dl_vg = $link->real_escape_string(trim($_POST['dl-vg']));
 			$dl_product = 1;
+			
 			if (isset($_POST['dl-product'])) {
 				$dl_product = $link->real_escape_string(trim($_POST['dl-product']));
 			}
+
 			$dl_modality = 'null';
 			if (isset($_POST['dl-modality'])) {
 				$value = $link->real_escape_string(trim($_POST['dl-modality']));
@@ -86,51 +87,60 @@ if(isset($_POST['ms']) && isset($_POST['page']) && isset($_POST['pr'])){
 			
 			if ($ca[0] === true) {
 				if ($idc === NULL) {
-					$idc = uniqid('@S#1$2013',true);
+					$idc = uniqid('@S#1$2013', true);
 					$record = $link->getRegistrationNumber($_SESSION['idEF'], 'DE', 0);
 					
 					$sql = 'insert into s_de_cot_cabecera 
-					(`id_cotizacion`, `no_cotizacion`, `id_ef`, 
-					`certificado_provisional`, `cobertura`, `id_prcia`, 
-					`monto`, `moneda`, `plazo`, `tipo_plazo`, `id_tc`, 
-					`fecha_creacion`, `id_usuario`, `act_usuario`, 
-					`fecha_actualizacion`, `modalidad`, `vg`)
+					(id_cotizacion, no_cotizacion, id_ef, 
+						certificado_provisional, cobertura, id_prcia, 
+						monto, moneda, plazo, tipo_plazo, id_tc, 
+						fecha_creacion, id_usuario, act_usuario, 
+						fecha_actualizacion, modalidad)
 					values
-					("'.$idc.'", '.$record.', "'.base64_decode($_SESSION['idEF']).'", 
-					false, '.$dl_coverage.', '.$dl_product.', '.$dl_amount.', 
-					"'.$dl_currency.'", '.$dl_term.', "'.$dl_type_term.'", 
-					'.$tc.', curdate(), "'.base64_decode($_SESSION['idUser']).'", 
-					"'.base64_decode($_SESSION['idUser']).'", curdate(), 
-					'.$dl_modality.', '.$dl_vg.' );';
+					("' . $idc . '", "' . $record . '", 
+						"' . base64_decode($_SESSION['idEF']) . '", false, 
+						"' . $dl_coverage . '", "' . $dl_product . '", 
+						"' . $dl_amount . '", "' . $dl_currency . '", 
+						"' . $dl_term . '", "' . $dl_type_term . '", 
+						"' . $tc . '", curdate(), "' . base64_decode($_SESSION['idUser']) . '", 
+						"' . base64_decode($_SESSION['idUser']) . '", curdate(), 
+						' . $dl_modality . ')
+					;';
 				} else {
 					$sql = 'update s_de_cot_cabecera
-					set `cobertura` = '.$dl_coverage.', `id_prcia` = '.$dl_product.', 
-					`monto` = '.$dl_amount.', `moneda` = "'.$dl_currency.'", `plazo` = '.$dl_term.', 
-					`tipo_plazo` = "'.$dl_type_term.'", `id_tc` = '.$tc.', 
-					`modalidad` = '.$dl_modality.'
-					where id_cotizacion = "'.$idc.'" and id_ef = "'.base64_decode($_SESSION['idEF']).'"
+					set 
+						cobertura = "' . $dl_coverage . '", 
+						id_prcia = "' . $dl_product . '", 
+						monto = "' . $dl_amount . '", 
+						moneda = "' . $dl_currency . '", 
+						plazo = "' . $dl_term . '", 
+						tipo_plazo = "' . $dl_type_term . '", 
+						id_tc = "' . $tc . '", 
+						modalidad = ' . $dl_modality . '
+					where 
+						id_cotizacion = "' . $idc . '" 
+							and id_ef = "' . base64_decode($_SESSION['idEF']) . '"
 					;';
 				}
 				
 				if ($link->query($sql) === TRUE) {
 					$arrDE[0] = 1;
-					$arrDE[1] = 'de-quote.php?ms='.$ms.'&page='.$page.'&pr='.base64_encode('DE|02').'&idc='.base64_encode($idc);
+					$arrDE[1] = 'de-quote.php?ms=' . $ms . '&page=' . $page 
+						. '&pr=' . base64_encode('DE|02') . '&idc=' . base64_encode($idc);
 					$arrDE[2] = 'La Cotización fue registrada con exito';
 				} else {
 					$arrDE[2] = 'No se pudo registrar la Cotización. !';
 				}
 			} else {
-				$arrDE[2] = 'El monto no debe sobrepasar los '.number_format($ca[1],2,'.',',').' '.$dl_currency;
+				$arrDE[2] = 'El monto no debe sobrepasar los ' 
+					. number_format($ca[1], 2, '.', ',') . ' ' . $dl_currency;
 			}
 		}
 	
 		$link->close();
-	
-		echo json_encode($arrDE);
-	} else {
-		echo json_encode($arrDE);
 	}
-} else {
-	echo json_encode($arrDE);
 }
+
+echo json_encode($arrDE);
+
 ?>

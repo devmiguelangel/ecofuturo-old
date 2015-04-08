@@ -85,7 +85,13 @@ class SibasDB extends MySQLi
 					0 => 'RM|Rotura de Maquinaria'),
 		$modTH = array (
 					0 => 'TC|Tarjeta de Crédito',
-					1 => 'TD|Tarjeta de Débito')
+					1 => 'TD|Tarjeta de Débito'),
+		$tasa_aps = array(
+			1 => 0.7,
+			2 => 0.6,
+			3 => 0.5,
+			4 => 0.4
+		)
 		
 		;
 	
@@ -124,6 +130,120 @@ class SibasDB extends MySQLi
         return self::$AGENCY;
     }
 
+    public function getCompany()
+    {
+    	$this->sql = 'select 
+    		scia.id_compania,
+    		scia.nombre,
+    		scia.logo,
+    		scia.activado 
+    	from s_compania as scia
+    	order by scia.id_compania asc 
+    	;';
+
+    	if (($this->rs = $this->query($this->sql, MYSQLI_STORE_RESULT)) !== false) {
+    		if ($this->rs->num_rows > 0) {
+    			return $this->rs;
+    		}
+    	}
+
+    	return false;
+    }
+
+    public function getAgeVG($idef)
+    {
+    	$this->sql = 'select 
+    		sh.edad_max
+    	from 
+    		s_sgc_home as sh
+    			inner join
+    		s_entidad_financiera as sef ON (sef.id_ef = sh.id_ef)
+    	where
+    		sef.id_ef = "' . base64_decode($idef) . '"
+    			and sh.producto = "VG"
+    	;';
+
+    	if (($this->rs = $this->query($this->sql, MYSQLI_STORE_RESULT)) !== false) {
+    		if ($this->rs->num_rows === 1) {
+    			$this->row = $this->rs->fetch_array(MYSQLI_ASSOC);
+    			return (int)$this->row['edad_max'];
+    		}
+    	}
+
+    	return 0;
+    }
+
+    public function getDataProduct($idef, $product = 'VG')
+    {
+    	$this->sql = 'select 
+			sh.edad_max,
+			sh.data
+    	from 
+    		s_sgc_home as sh
+    			inner join
+    		s_entidad_financiera as sef ON (sef.id_ef = sh.id_ef)
+    	where
+    		sef.id_ef = "' . base64_decode($idef) . '"
+    			and sh.producto = "' . $product . '"
+    	limit 0, 1
+    	;';
+
+    	if (($this->rs = $this->query($this->sql, MYSQLI_STORE_RESULT)) !== false) {
+    		if ($this->rs->num_rows === 1) {
+    			$this->row = $this->rs->fetch_array(MYSQLI_ASSOC);
+    			$this->rs->free();
+
+    			return $this->row;
+    		}
+    	}
+
+    	return false;
+    }
+
+    public function checkAmountVG($ci, $ext, $amount, $currency, $tcm, $amount_max, $idcia)
+    {
+    	if ($currency === 'USD') {
+			$amount = $amount * $tcm;
+		}
+
+		if ($amount > $amount_max) {
+			return true;
+		} else {
+			$this->sql = 'select 
+	    		sum(svc.monto) as monto_total
+	    	from 
+	    		s_de_em_detalle as sed
+	    			inner join
+	    		s_cliente as sc ON (sc.id_cliente = sed.id_cliente)
+	    			inner join
+	    		s_vg_em_cabecera as svc ON (svc.vg_id = sed.vg_id)
+	    			inner join
+	    		s_compania as scia ON (scia.id_compania = svc.id_compania)
+	    	where 
+	    		sc.ci = "' . $ci . '"
+	    			and sc.extension = "' . $ext . '"
+	    			and scia.id_compania = "' . $idcia . '"
+	    	having sum(svc.monto) is not null
+	    	;';
+	    	// echo $this->sql;
+	    	if (($this->rs = $this->query($this->sql, MYSQLI_STORE_RESULT)) !== false) {
+	    		if ($this->rs->num_rows === 1) {
+	    			$this->row = $this->rs->fetch_array(MYSQLI_ASSOC);
+	    			$this->rs->free();
+
+	    			if ($currency === 'USD') {
+	    				$amount = $amount * $tcm;
+	    			}
+
+	    			if (($this->row['monto_total'] + $amount) > $amount_max) {
+	    				return true;
+	    			}
+	    		}
+	    	}
+		}
+
+    	return false;
+    }
 
     public function getAgencyUser ($idef, $idUser, $flag = false)
     {

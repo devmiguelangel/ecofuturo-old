@@ -42,21 +42,26 @@ if($token === TRUE){
 			$titleCert2 = 'Certificado Vida en Grupo';
 			
 			$sqlIs = 'select 
-					sde.id_emision as ide,
-					sdc.id_cotizacion as idc,
-					sdc.vg, 
-					sde.prefijo,
-					sde.no_emision,
-					sde.id_compania,
-					sde.certificado_provisional as cp,
-					sde.modalidad,
-					sde.monto_solicitado,
-					sde.moneda,
-					stc.valor_boliviano as tipo_cambio
-				from s_de_em_cabecera as sde
-					inner join s_de_cot_cabecera as sdc on (sdc.id_cotizacion = sde.id_cotizacion)
-					inner join s_tipo_cambio as stc on (stc.id_tc = sde.id_tc)
-				where sde.id_emision = "'.$ide.'"
+				sde.id_emision as ide,
+				sdc.id_cotizacion as idc,
+				sde.prefijo,
+				sde.no_emision,
+				sde.id_compania,
+				sde.certificado_provisional as cp,
+				sde.modalidad,
+				sde.monto_solicitado,
+				sde.moneda,
+				stc.valor_boliviano as tipo_cambio,
+				sum(if(sdd.vg = true, 1, 0)) as vg_no
+			from 
+				s_de_em_cabecera as sde
+					inner join 
+				s_de_cot_cabecera as sdc ON (sdc.id_cotizacion = sde.id_cotizacion)
+					inner join
+				s_de_em_detalle as sdd ON (sdd.id_emision = sde.id_emision)
+					inner join 
+				s_tipo_cambio as stc ON (stc.id_tc = sde.id_tc)
+			where sde.id_emision = "'.$ide.'"
 			;';
 			break;
 		case 'AU':
@@ -106,11 +111,7 @@ if($token === TRUE){
 		$ide = base64_encode($rowIs['ide']);
 		$idc = base64_encode($rowIs['idc']);
 		$cp = (boolean)$rowIs['cp'];
-		if($product === 'DE'){
-			if((boolean)$rowIs['vg']===true){
-				$swDE = true;
-			}
-		}
+		
 		if ($cp === true) {
 			$category = base64_encode('CP');
 			$titleCert = 'Certificado Provisional';
@@ -123,26 +124,26 @@ if($token === TRUE){
 ?>
 <h3 id="issue-title">Póliza <?=$rowIs['prefijo'] . '-' . $rowIs['no_emision'];?></h3>
 
-<a href="certificate-detail.php?idc=<?=$idc;?>&cia=<?=base64_encode($rowIs['id_compania']);?>&type=<?=$type;?>&pr=<?=$pr;?>" class="fancybox fancybox.ajax view-detail">Ver <?=$titleSlip;?></a>
-<?php
-		if ($product === 'DE' && $rowIs['modalidad'] !== null && $swDE === true) {
-?>
-<a href="certificate-detail.php?idc=<?=$idc;?>&cia=<?=base64_encode($rowIs['id_compania']);?>&type=<?=$type;?>&pr=<?=$pr;?>&category=<?=base64_encode('PES');?>" class="fancybox fancybox.ajax view-detail">Ver <?=$titleSlip2;?></a>
-<?php
-		}
-?>
+<a href="certificate-detail.php?idc=<?=$idc;?>&cia=<?=
+	base64_encode($rowIs['id_compania']);?>&type=<?=
+	$type;?>&pr=<?=$pr;?>" class="fancybox fancybox.ajax view-detail">
+	Ver <?=$titleSlip;?></a>
 
-<a href="certificate-detail.php?ide=<?=$ide;?>&type=<?=$type;?>&pr=<?=$pr;?>&category=<?=$category;?>" class="fancybox fancybox.ajax view-detail">Ver <?=$titleCert;?></a>
+<a href="certificate-detail.php?ide=<?=$ide;?>&type=<?=
+	$type;?>&pr=<?=$pr;?>&category=<?=$category;?>" 
+	class="fancybox fancybox.ajax view-detail">Ver <?=$titleCert;?></a>
+<?php if ($product === 'DE'): ?>
+	<?php if ((int)$rowIs['vg_no'] > 0): ?>
+<a href="certificate-detail.php?ide=<?=$ide;?>&type=<?=
+	$type;?>&pr=<?=$pr;?>&category=<?=base64_encode('VGC');?>" 
+	class="fancybox fancybox.ajax view-detail">Ver Certificado Vida Grupo</a>
+	<?php endif ?>
+<?php endif ?>
 <?php
-		if ($product === 'DE' && $rowIs['modalidad'] !== null && $swDE === true) {
-?>
-<a href="certificate-detail.php?ide=<?=$ide;?>&type=<?=$type;?>&pr=<?=$pr;?>&category=<?=base64_encode('PEC');?>" class="fancybox fancybox.ajax view-detail">Ver <?=$titleCert2;?></a>
-<?php
-		}
-	}else{
+	} else {
 		echo 'Usted no puede visualizar los Cetificados';
 	}
-}else{
+} else {
 	include('index-content.inc.php');
 }
 ?>

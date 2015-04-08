@@ -3,6 +3,12 @@ $(document).ready(function(e) {
 	$("#fde-customer").validateForm({
 		action: 'DE-customer-record.php'
 	});
+
+	$('input').iCheck({
+		checkboxClass: 'icheckbox_square-red',
+		radioClass: 'iradio_square-red',
+		increaseArea: '20%' // optional
+	});
 	
 	$("#dc-date-birth").datepicker({
 		changeMonth: true,
@@ -66,6 +72,7 @@ $dc_gender = '';
 $dc_weight = '';
 $dc_height = '';
 $dc_amount = 0;
+$dc_vg = '';
 
 $title_btn = 'Agregar Titular';
 $err_search = '';
@@ -218,14 +225,18 @@ if(isset($_GET['idCl'])){
 			scl.peso,
 			scl.estatura,
 			scl.genero,
-			scl.saldo_deudor as cl_saldo
+			scl.saldo_deudor as cl_saldo,
+			sdd.vg
 		from
 			s_de_cot_cliente as scl
 				inner join
-				    s_entidad_financiera as sef ON (sef.id_ef = scl.id_ef)
+			s_de_cot_detalle as sdd ON (sdd.id_cliente = scl.id_cliente)
+				inner join
+		    s_entidad_financiera as sef ON (sef.id_ef = scl.id_ef)
 		where
-			scl.id_cliente = "'.base64_decode($_GET['idCl']).'"
-				and sef.id_ef = "'.base64_decode($_SESSION['idEF']).'"
+			scl.id_cliente = "' . base64_decode($_GET['idCl']) . '"
+				and sdd.id_cotizacion = "' . base64_decode($_GET['idc']) . '"
+				and sef.id_ef = "' . base64_decode($_SESSION['idEF']) . '"
 				and sef.activado = true
 		;';
 	
@@ -260,6 +271,9 @@ if(isset($_GET['idCl'])){
 		$dc_weight = $rowUp['peso'];
 		$dc_height = $rowUp['estatura'];
         $dc_amount = $rowUp['cl_saldo'];
+        if ((boolean)$rowUp['vg'] === true) {
+        	$dc_vg = 'checked';
+        }
 	}
 }
 ?>
@@ -304,9 +318,11 @@ if($swCl === FALSE){
 <form id="fde-sc" name="fde-sc" action="" method="post" class="form-quote">
 	<label>Documento de Identidad: <span>*</span></label>
 	<div class="content-input" style="width:auto;">
-		<input type="text" id="dsc-dni" name="dsc-dni" autocomplete="off" value="" style="width:120px;" class="required text fbin">
+		<input type="text" id="dsc-dni" name="dsc-dni" autocomplete="off" 
+			value="" style="width:120px;" class="required text fbin">
 	</div>
-	<input type="submit" id="dsc-sc" name="dsc-sc" value="Buscar Titular" class="btn-search-cs">
+	<input type="submit" id="dsc-sc" name="dsc-sc" value="Buscar Titular" 
+		class="btn-search-cs">
     <div class="mess-err-sc"><?=$err_search;?></div>
 </form>
 <hr>
@@ -348,7 +364,15 @@ if($swCl === FALSE){
 					<td><?=$rowCl['cl_fn'];?></td>
 					<td><?=$rowCl['cl_genero'];?></td>
 					<td><?=$rowCl['cl_pc'];?></td>
-					<td><a href="de-quote.php?ms=<?=$_GET['ms'];?>&page=<?=$_GET['page'];?>&pr=<?=$_GET['pr'];?>&idc=<?=$_GET['idc'];?>&idCl=<?=base64_encode($rowCl['id_cliente']);?>" title="Editar Información"><img src="img/edit-user-icon.png" width="40" height="40" alt="Editar Información" title="Editar Información"></a></td>
+					<td>
+						<a href="de-quote.php?ms=<?=$_GET['ms'];?>&page=<?=
+							$_GET['page'];?>&pr=<?=$_GET['pr'];?>&idc=<?=
+							$_GET['idc'];?>&idCl=<?=base64_encode($rowCl['id_cliente']);?>" 
+							title="Editar Información">
+							<img src="img/edit-user-icon.png" width="40" height="40" 
+								alt="Editar Información" title="Editar Información">
+						</a>
+					</td>
 				</tr>
 	<?php
 			$cont += 1;
@@ -372,27 +396,31 @@ if($nCl < $max_item || $swCl === TRUE){
 	<div class="form-col">
 		<label>Nombres: <span>*</span></label>
 		<div class="content-input">
-			<input type="text" id="dc-name" name="dc-name" autocomplete="off" value="<?=$dc_name;?>" class="required text fbin">
+			<input type="text" id="dc-name" name="dc-name" autocomplete="off" 
+				value="<?=$dc_name;?>" class="required text fbin">
 		</div><br>		
 		
 		<label>Apellido Paterno: <span>*</span></label>
 		<div class="content-input">
-			<input type="text" id="dc-ln-patern" name="dc-ln-patern" autocomplete="off" value="<?=$dc_lnpatern;?>" class="required text fbin">
+			<input type="text" id="dc-ln-patern" name="dc-ln-patern" autocomplete="off" 
+				value="<?=$dc_lnpatern;?>" class="required text fbin">
 		</div><br>
 		
 		<label>Apellido Materno: </label>
 		<div class="content-input">
-			<input type="text" id="dc-ln-matern" name="dc-ln-matern" autocomplete="off" value="<?=$dc_lnmatern;?>" class="not-required text fbin">
+			<input type="text" id="dc-ln-matern" name="dc-ln-matern" autocomplete="off" 
+				value="<?=$dc_lnmatern;?>" class="not-required text fbin">
 		</div><br>
 		
 		<label>Apellido de Casada: </label>
 		<div class="content-input">
-			<input type="text" id="dc-ln-married" name="dc-ln-married" autocomplete="off" value="<?=$dc_lnmarried;?>" class="not-required text fbin">
+			<input type="text" id="dc-ln-married" name="dc-ln-married" autocomplete="off" 
+				value="<?=$dc_lnmarried;?>" class="not-required text fbin">
 		</div><br>
 
-		<label>Estado Civil: <span>*</span></label>
+		<label>Estado Civil: <span></span></label>
 		<div class="content-input">
-			<select id="dc-status" name="dc-status" class="required fbin">
+			<select id="dc-status" name="dc-status" class="not-required fbin">
             	<option value="">Seleccione...</option>
 <?php
 $arr_status = $link->status;
@@ -427,12 +455,14 @@ for($i = 0; $i < count($arr_type_doc); $i++){
 		
 		<label>Documento de Identidad: <span>*</span></label>
 		<div class="content-input">
-			<input type="text" id="dc-doc-id" name="dc-doc-id" autocomplete="off" value="<?=$dc_doc_id;?>" class="required dni fbin">
+			<input type="text" id="dc-doc-id" name="dc-doc-id" autocomplete="off" 
+				value="<?=$dc_doc_id;?>" class="required dni fbin">
 		</div><br>
 		
 		<label>Complemento: </label>
 		<div class="content-input">
-			<input type="text" id="dc-comp" name="dc-comp" autocomplete="off" value="<?=$dc_comp;?>" class="not-required dni fbin" style="width:60px;">
+			<input type="text" id="dc-comp" name="dc-comp" autocomplete="off" 
+				value="<?=$dc_comp;?>" class="not-required dni fbin" style="width:60px;">
 		</div><br>
 		
 		<label>Extensión: <span>*</span></label>
@@ -444,13 +474,17 @@ $rsDep = null;
 if (($rsDep = $link->get_depto()) === FALSE) {
 	$rsDep = null;
 }
+
 if ($rsDep->data_seek(0) === TRUE) {
 	while($rowDep = $rsDep->fetch_array(MYSQLI_ASSOC)){
 		if((boolean)$rowDep['tipo_ci'] === TRUE){
-			if($rowDep['id_depto'] === $dc_ext)
-				echo '<option value="'.$rowDep['id_depto'].'" selected>'.$rowDep['departamento'].'</option>';
-			else
-				echo '<option value="'.$rowDep['id_depto'].'">'.$rowDep['departamento'].'</option>';
+			if($rowDep['id_depto'] === $dc_ext) {
+				echo '<option value="' . $rowDep['id_depto'] . '" selected>' 
+					. $rowDep['departamento'] . '</option>';
+			} else {
+				echo '<option value="' . $rowDep['id_depto'] . '">' 
+					. $rowDep['departamento'].'</option>';
+			}
 		}
 	}
 }
@@ -460,20 +494,23 @@ if ($rsDep->data_seek(0) === TRUE) {
 		
 		<label>Fecha de Nacimiento: <span>*</span></label>
 		<div class="content-input">
-			<input type="text" id="dc-date-birth" name="dc-date-birth" autocomplete="off" value="<?=$dc_birth;?>" class="required fbin" readonly style="cursor:pointer;">
+			<input type="text" id="dc-date-birth" name="dc-date-birth" autocomplete="off" 
+				value="<?=$dc_birth;?>" class="required fbin" readonly style="cursor:pointer;">
 		</div><br>
 		
 		<label>País: <span></span></label>
 		<div class="content-input">
-			<input type="text" id="dc-country" name="dc-country" autocomplete="off" value="<?=$dc_country;?>" class="not-required text fbin">
+			<input type="text" id="dc-country" name="dc-country" autocomplete="off" 
+				value="<?=$dc_country;?>" class="not-required text fbin">
 		</div><br>
 		
-		<label>Lugar de Nacimiento: <span></span></label>
+		<label>Lugar de Nacimiento: <span>*</span></label>
 		<div class="content-input">
-			<input type="text" id="dc-place-birth" name="dc-place-birth" autocomplete="off" value="<?=$dc_place_birth;?>" class="not-required fbin">
+			<input type="text" id="dc-place-birth" name="dc-place-birth" 
+				autocomplete="off" value="<?=$dc_place_birth;?>" class="required fbin">
 		</div><br>
 		
-		<label>Lugar de Trabajo: <span>*</span></label>
+		<label>Lugar de Residencia: <span>*</span></label>
 		<div class="content-input">
 			<select id="dc-place-res" name="dc-place-res" class="required fbin">
 				<option value="">Seleccione...</option>
@@ -481,10 +518,13 @@ if ($rsDep->data_seek(0) === TRUE) {
 if ($rsDep->data_seek(0) === TRUE) {
 	while($rowDep = $rsDep->fetch_array(MYSQLI_ASSOC)){
 		if((boolean)$rowDep['tipo_dp'] === TRUE){
-			if($rowDep['id_depto'] === $dc_place_res)
-				echo '<option value="'.$rowDep['id_depto'].'" selected>'.$rowDep['departamento'].'</option>';
-			else
-				echo '<option value="'.$rowDep['id_depto'].'">'.$rowDep['departamento'].'</option>';
+			if($rowDep['id_depto'] === $dc_place_res) {
+				echo '<option value="' . $rowDep['id_depto'] . '" selected>' 
+					. $rowDep['departamento'].'</option>';
+			} else {
+				echo '<option value="' . $rowDep['id_depto'] . '">' 
+					. $rowDep['departamento'].'</option>';
+			}
 		}
 	}
 }
@@ -494,31 +534,37 @@ if ($rsDep->data_seek(0) === TRUE) {
 		
 		<label>Localidad: <span></span></label>
 		<div class="content-input">
-			<input type="text" id="dc-locality" name="dc-locality" autocomplete="off" value="<?=$dc_locality;?>" class="not-required text-2 fbin">
+			<input type="text" id="dc-locality" name="dc-locality" autocomplete="off" 
+				value="<?=$dc_locality;?>" class="not-required text-2 fbin">
 		</div><br>
 	</div><!--
 	--><div class="form-col">
 		<label>Dirección: <span>*</span></label><br>
-		<textarea id="dc-address" name="dc-address" class="required fbin"><?=$dc_address;?></textarea><br>
+		<textarea id="dc-address" name="dc-address" 
+			class="required fbin"><?=$dc_address;?></textarea><br>
 		
-		<label>Teléfono 1: <span>*</span></label>
+		<label>Teléfono 1: <span></span></label>
 		<div class="content-input">
-			<input type="text" id="dc-phone-1" name="dc-phone-1" autocomplete="off" value="<?=$dc_phone_1;?>" class="required phone fbin">
+			<input type="text" id="dc-phone-1" name="dc-phone-1" autocomplete="off" 
+				value="<?=$dc_phone_1;?>" class="not-required phone fbin">
 		</div><br>
 		
 		<label>Teléfono 2: </label>
 		<div class="content-input">
-			<input type="text" id="dc-phone-2" name="dc-phone-2" autocomplete="off" value="<?=$dc_phone_2;?>" class="not-required phone fbin">
+			<input type="text" id="dc-phone-2" name="dc-phone-2" autocomplete="off" 
+				value="<?=$dc_phone_2;?>" class="not-required phone fbin">
 		</div><br>
 		
 		<label>Teléfono oficina: </label>
 		<div class="content-input">
-			<input type="text" id="dc-phone-office" name="dc-phone-office" autocomplete="off" value="<?=$dc_phone_office;?>" class="not-required phone  fbin">
+			<input type="text" id="dc-phone-office" name="dc-phone-office" autocomplete="off" 
+				value="<?=$dc_phone_office;?>" class="not-required phone  fbin">
 		</div><br>
 		
 		<label>Email: </label>
 		<div class="content-input">
-			<input type="text" id="dc-email" name="dc-email" autocomplete="off" value="<?=$dc_email;?>" class="not-required email fbin">
+			<input type="text" id="dc-email" name="dc-email" autocomplete="off" 
+				value="<?=$dc_email;?>" class="not-required email fbin">
 		</div><br>
 		
 		<label>Ocupación: <span>*</span></label>
@@ -529,9 +575,11 @@ if ($rsDep->data_seek(0) === TRUE) {
 if (($rsOcc = $link->get_occupation($_SESSION['idEF'])) !== FALSE) {
 	while($rowOcc = $rsOcc->fetch_array(MYSQLI_ASSOC)){
 		if($rowOcc['id_ocupacion'] === $dc_occupation) {
-			echo '<option value="'.base64_encode($rowOcc['id_ocupacion']).'" selected>'.$rowOcc['ocupacion'].'</option>';
+			echo '<option value="' . base64_encode($rowOcc['id_ocupacion']) 
+				. '" selected>' . $rowOcc['ocupacion'] . '</option>';
 		} else {
-			echo '<option value="'.base64_encode($rowOcc['id_ocupacion']).'">'.$rowOcc['ocupacion'].'</option>';
+			echo '<option value="' . base64_encode($rowOcc['id_ocupacion']) . '">' 
+				. $rowOcc['ocupacion'].'</option>';
 		}
 	}
 }
@@ -540,7 +588,8 @@ if (($rsOcc = $link->get_occupation($_SESSION['idEF'])) !== FALSE) {
 		</div><br>
 		
 		<label style="width:auto;">Descripción Ocupación: <span>*</span></label><br>
-		<textarea id="dc-desc-occ" name="dc-desc-occ" class="required fbin"><?=$dc_desc_occ;?></textarea><br>
+		<textarea id="dc-desc-occ" name="dc-desc-occ" 
+			class="required fbin"><?=$dc_desc_occ;?></textarea><br>
 		
 		<label>Género: <span>*</span></label>
 		<div class="content-input">
@@ -550,10 +599,12 @@ if (($rsOcc = $link->get_occupation($_SESSION['idEF'])) !== FALSE) {
 $arr_gender = $link->gender;
 for($i = 0; $i < count($arr_gender); $i++){
 	$gender = explode('|',$arr_gender[$i]);
-	if($gender[0] === $dc_gender)
-		echo '<option value="'.$gender[0].'" selected>'.$gender[1].'</option>';
-	else
-		echo '<option value="'.$gender[0].'">'.$gender[1].'</option>';
+	if($gender[0] === $dc_gender) {
+		echo '<option value="' . $gender[0] . '" selected>' 
+			. $gender[1] . '</option>';
+	} else {
+		echo '<option value="' . $gender[0] . '">' . $gender[1] . '</option>';
+	}
 }
 ?>
 			</select>
@@ -561,15 +612,26 @@ for($i = 0; $i < count($arr_gender); $i++){
 		
 		<label>Peso: <span>*</span></label>
 		<div class="content-input">
-			<input type="text" id="dc-weight" name="dc-weight" autocomplete="off" value="<?=$dc_weight;?>" class="required wh fbin">
+			<input type="text" id="dc-weight" name="dc-weight" autocomplete="off" 
+				value="<?=$dc_weight;?>" class="required wh fbin">
 		</div><br>
 		
 		<label>Estatura: <span>*</span></label>
 		<div class="content-input">
-			<input type="text" id="dc-height" name="dc-height" autocomplete="off" value="<?=$dc_height;?>" class="required wh fbin">
+			<input type="text" id="dc-height" name="dc-height" autocomplete="off" 
+				value="<?=$dc_height;?>" class="required wh fbin">
             <input type="hidden" id="dc-amount" name="dc-amount" value="<?=base64_encode($dc_amount);?>">
 		</div><br>
+
+		<label>Requiere Vida Grupo?: <span></span></label>
+		<div class="content-input">
+			<label class="check" style="width: auto;">
+				<input type="checkbox" id="dc-vg" name="dc-vg" 
+					value="1" <?=$dc_vg;?>>&nbsp;&nbsp;
+			</label>
+		</div><br>
 	</div><br>
+
     <input type="hidden" id="ms" name="ms" value="<?=$_GET['ms'];?>">
 	<input type="hidden" id="page" name="page" value="<?=$_GET['page'];?>">
 	<input type="hidden" id="pr" name="pr" value="<?=base64_encode('DE|02');?>">

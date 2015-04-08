@@ -15,55 +15,37 @@ $link = new SibasDB();
 $idc = $link->real_escape_string(trim(base64_decode($_GET['idc'])));
 
 $sqlCia = 'select 
-		sdc.id_cotizacion,
-		sec.id_ef_cia,
-		sdc.id_prcia,
-		scia.id_compania as idcia,
-		scia.nombre as cia_nombre,
-		scia.logo as cia_logo,
-		sdc.monto as valor_asegurado,
-		sdc.moneda,
-		st.tasa_final as t_tasa_final,
-		sdc.modalidad,
-		sdc.vg
-	from
-		s_de_cot_cabecera as sdc
-			inner join
-		s_producto_cia as spc ON (spc.id_prcia = sdc.id_prcia)
-			inner join
-		s_ef_compania as sec ON (sec.id_ef_cia = spc.id_ef_cia)
-			inner join
-		s_compania as scia ON (scia.id_compania = sec.id_compania)
-			inner join
-		s_entidad_financiera as sef ON (sef.id_ef = sec.id_ef)
-			inner join
-		s_tasa_de as st ON (st.id_prcia = spc.id_prcia)
-			inner join
-		s_producto as spr ON (spr.id_producto = spc.id_producto)
-	where
-		sdc.id_cotizacion = "'.$idc.'"
-			and sef.id_ef = "'.base64_decode($_SESSION['idEF']).'"
-			and sef.activado = true
-			and sec.producto = "DE"
-			and scia.activado = true
-			and spr.activado = true
-	;';
+	sdc.id_cotizacion,
+	sec.id_ef_cia,
+	sdc.id_prcia,
+	scia.id_compania as idcia,
+	scia.nombre as cia_nombre,
+	scia.logo as cia_logo,
+	sdc.monto as valor_asegurado,
+	sdc.moneda,
+	sdc.tasa as t_tasa_final,
+	sdc.modalidad
+from
+	s_de_cot_cabecera as sdc
+		inner join
+	s_entidad_financiera as sef ON (sef.id_ef = sdc.id_ef)
+		inner join
+	s_ef_compania as sec ON (sec.id_ef = sef.id_ef)
+		inner join
+	s_compania as scia ON (scia.id_compania = sec.id_compania)
+where
+	sdc.id_cotizacion = "'.$idc.'"
+		and sef.id_ef = "'.base64_decode($_SESSION['idEF']).'"
+		and sef.activado = true
+		and sec.producto = "DE"
+		and scia.activado = true
+;';
 // echo $sqlCia;
 $rsCia = $link->query($sqlCia,MYSQLI_STORE_RESULT);
 if($rsCia->num_rows > 0){
 	$nForm = 0;
 	$tipo_cambio = $link->get_rate_exchange(true);
-	while($rowCia = $rsCia->fetch_array(MYSQLI_ASSOC)){
-		/*
-		if(($rowCia['moneda'] === 'BS' && $rowCia['valor_asegurado'] > (5000*(float)$tipo_cambio)) 
-			|| ($rowCia['moneda'] === 'USD' && $rowCia['valor_asegurado'] > 5000)){
-			$rowCia['modalidad'] = null;
-		}
-		*/
-		if((boolean)$rowCia['vg']===false){
-			$rowCia['modalidad'] = null;
-		}
-		
+	while ($rowCia = $rsCia->fetch_array(MYSQLI_ASSOC)) {
 		if ($rowCia['modalidad'] !== null) {
 			$sqlPe = 'select 
 				spe.id_pr_extra,
@@ -132,46 +114,22 @@ function resultQuote ($rowCia, $modality, $token, $rowPe = null, $nForm = 0) {
 	</div>
 	<span class="rq-tasa">
 		Tasa Desgravamen: 
-		<?=number_format($rowCia['t_tasa_final'],2,'.',',');?> %
+		<?= number_format($rowCia['t_tasa_final'], 2, '.', ',') ;?> %
 	</span>
 	
-	<a href="certificate-detail.php?idc=<?=base64_encode($rowCia['id_cotizacion']);?>&cia=<?=base64_encode($rowCia['idcia']);?>&pr=<?=base64_encode('DE');?>&type=<?=base64_encode('PRINT');?>" class="fancybox fancybox.ajax btn-see-slip">Ver slip de Cotización</a>
-<?php
-if ($modality === false) {
-?>
-	<span class="rq-tasa">
-		Prima seguro Vida en Grupo: 
-		<?='25 BS';//number_format($rowPe['pr_prima'],2,'.',',').' USD';?>
-	</span>
-	
-	<a href="certificate-detail.php?idc=<?=base64_encode($rowCia['id_cotizacion']);?>&cia=<?=base64_encode($rowCia['idcia']);?>&pr=<?=base64_encode('DE');?>&type=<?=base64_encode('PRINT');?>&category=<?=base64_encode('PES');?>&pe=<?=base64_encode($rowPe['id_pr_extra']);?>" class="fancybox fancybox.ajax btn-see-slip">Ver slip Vida en Grupo</a>
-<?php
-}
-if($token === TRUE){
-	if ($modality === true) {
-?>
-	<a href="de-quote.php?ms=<?=$_GET['ms'];?>&page=<?=$_GET['page'];?>&pr=<?=base64_encode('DE|05');?>&idc=<?=$_GET['idc'];?>&flag=<?=md5('i-new');?>&cia=<?=base64_encode($rowCia['idcia']);?>" class="btn-send">Emitir</a>
-<?php
-	} else {
-?>
-	<form id="f_cot_<?=$nForm;?>" name="f_cot_<?=$nForm;?>" class="f_cot_save" style="font-size:100%;">
-    	<input type="hidden" id="idc" name="idc" value="<?=base64_encode($rowCia['id_cotizacion']);?>">
-    	<input type="hidden" id="idPe" name="idPe" value="<?=base64_encode($rowPe['id_pr_extra']);?>">
-        <input type="hidden" id="idEf" name="idEf" value="<?=$_SESSION['idEF'];?>">
-        <input type="hidden" id="cia" name="cia" value="<?=base64_encode($rowCia['idcia']);?>">
-        <input type="hidden" id="ms" name="ms" value="<?=$_GET['ms'];?>">
-        <input type="hidden" id="page" name="page" value="<?=$_GET['page'];?>">
-        
-        <input type="submit" value="Emitir" class="btn-send" style="width:190px; cursor:pointer;">
-        
-        <div class="loading" style="font-size:50%;">
-            <img src="img/loading-01.gif" width="35" height="35" />
-        </div>
-    </form>
-<?php
-	}
-}
-?>
+	<a href="certificate-detail.php?idc=<?=
+		base64_encode($rowCia['id_cotizacion']);?>&cia=<?=
+		base64_encode($rowCia['idcia']);?>&pr=<?=
+		base64_encode('DE');?>&type=<?=base64_encode('PRINT');?>" 
+		class="fancybox fancybox.ajax btn-see-slip">Ver slip de Cotización</a>
+<?php if ($token === true): ?>
+	<?php if ($modality === true): ?>
+	<a href="de-quote.php?ms=<?=$_GET['ms'];?>&page=<?=$_GET['page'];?>&pr=<?=
+		base64_encode('DE|05');?>&idc=<?=$_GET['idc'];?>&flag=<?=
+		md5('i-new');?>&cia=<?=base64_encode($rowCia['idcia']);?>" 
+		class="btn-send">Emitir</a>	
+	<?php endif ?>
+<?php endif ?>
 </div>
 <?php
 }

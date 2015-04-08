@@ -14,6 +14,7 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 		$sw = 0;
         $data = array();
         $client = array();
+        $vg_token = false;
 		
 		$ms = $link->real_escape_string(trim($_POST['ms']));
 		$page = $link->real_escape_string(trim($_POST['page']));
@@ -27,6 +28,11 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 		$target = '';
 		if(isset($_POST['target'])) {
 			$target = '&target='.$link->real_escape_string(trim($_POST['target']));
+		}
+
+		$vg_data = false;
+		if (($vg_data = $link->getDataProduct($_SESSION['idEF'])) !== false) {
+			$vg_data['data'] = json_decode($vg_data['data'], true);
 		}
 		
 		$flag = $_POST['flag'];
@@ -69,7 +75,6 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 				$dcr_currency = $link->real_escape_string(trim($_POST['dcr-currency']));
 				$dcr_term = $link->real_escape_string(trim($_POST['dcr-term']));
 				$dcr_type_term = $link->real_escape_string(trim($_POST['dcr-type-term']));
-				$dcr_vg = $link->real_escape_string(trim($_POST['vg']));
 				$dcr_type_mov = '';
 				if (isset($_POST['dcr-type-mov'])) {
 					$dcr_type_mov = $link->real_escape_string(trim($_POST['dcr-type-mov']));
@@ -100,11 +105,7 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 				}
 				
 				$tcm = $link->get_rate_exchange(true);
-				// Beneficiarios de Vida Grupo
-				if((boolean)$dcr_vg===true){
-					$swDE = true;
-				}
-				
+								
 				$cont = 0;
 				while($cont < $nCl){
 					$cont += 1;
@@ -147,6 +148,68 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
                     $client[$cont]['cl_materno'] = $arr_cl[$cont]['cl-matern'];
                     $client[$cont]['cl_ci'] = $arr_cl[$cont]['cl-doc-id'];
                     $client[$cont]['cl_extension'] = $arr_cl[$cont]['cl-ext'];
+
+                    if (isset($_POST['vg_id_' . $cont]) && $vg_data !== false) {
+						$arr_cl[$cont]['vg'] = true;
+						$arr_cl[$cont]['vg_id'] = date('U') + $cont;
+						$arr_cl[$cont]['vg_cia'] = 
+							$link->real_escape_string(trim(base64_decode($_POST['vg_cia_' . $cont])));
+						$arr_cl[$cont]['vg_response'] = array();
+						$arr_cl[$cont]['vg_tasa'] = $vg_data['data']['tasa'];
+						$arr_cl[$cont]['vg_amount'] = 0;
+
+						foreach ($vg_data['data']['modality'] as $key => $value) {
+							if ($value['active'] === true) {
+								switch ($value['slug']) {
+								case 'VS':
+									$arr_cl[$cont]['vg_amount'] = $value['amount'];
+									break;
+								case 'VA':
+									$arr_cl[$cont]['vg_amount'] = $dcr_amount;
+
+									if ($arr_cl[$cont]['vg_amount'] > $value['amount']) {
+										$arr_cl[$cont]['vg_amount'] = $value['amount'];
+									}
+									break;
+								}
+
+								break;
+							}
+						}
+
+						if ($link->checkAmountVG($arr_cl[$cont]['cl-doc-id'], 
+									$arr_cl[$cont]['cl-ext'], $arr_cl[$cont]['vg_amount'],
+									$dcr_currency, $tcm, $vg_data['data']['amount_max'], 
+									$arr_cl[$cont]['vg_cia']) === true
+								|| $arr_cl[$cont]['vg_amount'] < $vg_data['data']['amount_min']) {
+							$arr_cl[$cont]['vg'] = false;
+							$arr_cl[$cont]['vg_id'] = 'null';
+						}
+
+						if (($rs_vgq = $link->get_question($_SESSION['idEF'], 'VG')) !== false
+								&& $arr_cl[$cont]['vg'] === true) {
+							while ($row_vgq = $rs_vgq->fetch_array(MYSQLI_ASSOC)) {
+								$vg_qs_value = 
+									(int)$link->real_escape_string(trim($_POST['vg_qs_' 
+										. $cont . '_' . $row_vgq['id_pregunta']]));
+
+								if ($vg_qs_value === 0) {
+									$arr_cl[$cont]['vg_response'][$row_vgq['orden']] = array(
+										'id' 	=> (int)$row_vgq['id_pregunta'], 
+										'value' => $vg_qs_value
+									);
+								} else {
+									$arr_cl[$cont]['vg'] = false;
+									$arr_cl[$cont]['vg_id'] = 'null';
+									break;
+								}
+							}
+						}
+						
+						if ($arr_cl[$cont]['vg'] === true) {
+							$vg_token = true;
+						}
+					}
 					
 					// Beneficiarios de Sepelio
 					if (isset($_POST['dsp-'.$cont.'-idb'])) {
@@ -163,57 +226,6 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 					$arr_cl[$cont]['cl-sp-cov'] = 'SP';
 					if(empty($arr_cl[$cont]['cl-sp-ext']) === TRUE) {
 						$arr_cl[$cont]['cl-sp-ext'] = 1;
-					}
-					
-					// Beneficiario vida Grupo										
-					if ($swMo !== false && $swDE === true) {
-						if (isset($_POST['dvg-'.$cont.'-idb'])) {
-							$arr_cl[$cont]['cl-vg-idb'] = $link->real_escape_string(trim(base64_decode($_POST['dvg-'.$cont.'-idb'])));
-						} else {
-							$arr_cl[$cont]['cl-vg-idb'] = uniqid('@S#1$2013'.($cont + 1), true);
-						}
-						$arr_cl[$cont]['cl-vg-name'] = $link->real_escape_string(trim($_POST['dvg-'.$cont.'-name']));
-						$arr_cl[$cont]['cl-vg-patern'] = $link->real_escape_string(trim($_POST['dvg-'.$cont.'-ln-patern']));
-						$arr_cl[$cont]['cl-vg-matern'] = $link->real_escape_string(trim($_POST['dvg-'.$cont.'-ln-matern']));
-						$arr_cl[$cont]['cl-vg-relation'] = $link->real_escape_string(trim($_POST['dvg-'.$cont.'-relation']));
-						$arr_cl[$cont]['cl-vg-age'] = $link->real_escape_string(trim($_POST['dvg-'.$cont.'-age']));
-						$arr_cl[$cont]['cl-vg-cov'] = 'VG';
-					}
-					
-					// Beneficiarios Primarios
-					if ($swMo === false) {
-						if (isset($_POST['dpr-'.$cont.'-idb'])) {
-							$arr_cl[$cont]['cl-pr-idb'] = $link->real_escape_string(trim(base64_decode($_POST['dpr-'.$cont.'-idb'])));
-						} else {
-							$arr_cl[$cont]['cl-pr-idb'] = uniqid('@S#1$2013'.($cont + 2), true);
-						}
-						$arr_cl[$cont]['cl-pr-name'] = $link->real_escape_string(trim($_POST['dpr-'.$cont.'-name']));
-						$arr_cl[$cont]['cl-pr-patern'] = $link->real_escape_string(trim($_POST['dpr-'.$cont.'-ln-patern']));
-						$arr_cl[$cont]['cl-pr-matern'] = $link->real_escape_string(trim($_POST['dpr-'.$cont.'-ln-matern']));
-						$arr_cl[$cont]['cl-pr-relation'] = $link->real_escape_string(trim($_POST['dpr-'.$cont.'-relation']));
-						$arr_cl[$cont]['cl-pr-doc-id'] = $link->real_escape_string(trim($_POST['dpr-'.$cont.'-doc-id']));
-						$arr_cl[$cont]['cl-pr-ext'] = $link->real_escape_string(trim($_POST['dpr-'.$cont.'-ext']));
-						$arr_cl[$cont]['cl-pr-cov'] = 'PR';
-						if(empty($arr_cl[$cont]['cl-pr-ext']) === TRUE) {
-							$arr_cl[$cont]['cl-pr-ext'] = 1;
-						}
-						
-						// Beneficiarios Contingente
-						if (isset($_POST['dco-'.$cont.'-idb'])) {
-							$arr_cl[$cont]['cl-co-idb'] = $link->real_escape_string(trim(base64_decode($_POST['dco-'.$cont.'-idb'])));
-						} else {
-							$arr_cl[$cont]['cl-co-idb'] = uniqid('@S#1$2013'.($cont + 3), true);
-						}
-						$arr_cl[$cont]['cl-co-name'] = $link->real_escape_string(trim($_POST['dco-'.$cont.'-name']));
-						$arr_cl[$cont]['cl-co-patern'] = $link->real_escape_string(trim($_POST['dco-'.$cont.'-ln-patern']));
-						$arr_cl[$cont]['cl-co-matern'] = $link->real_escape_string(trim($_POST['dco-'.$cont.'-ln-matern']));
-						$arr_cl[$cont]['cl-co-relation'] = $link->real_escape_string(trim($_POST['dco-'.$cont.'-relation']));
-						$arr_cl[$cont]['cl-co-doc-id'] = $link->real_escape_string(trim($_POST['dco-'.$cont.'-doc-id']));
-						$arr_cl[$cont]['cl-co-ext'] = $link->real_escape_string(trim($_POST['dco-'.$cont.'-ext']));
-						$arr_cl[$cont]['cl-co-cov'] = 'CO';
-						if(empty($arr_cl[$cont]['cl-co-ext']) === TRUE) {
-							$arr_cl[$cont]['cl-co-ext'] = 1;
-						}
 					}
 					
 					$arr_cl[$cont]['cl-q-idd'] = $link->real_escape_string(trim(base64_decode($_POST['dq-'.$cont.'-idd'])));
@@ -307,7 +319,7 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 								$FAC = TRUE;
 							}
 							$prefix[0] = 'DE';
-						}else{
+						} else {
 							$prefix[0] = 'DE';
 						}
 						break;
@@ -317,7 +329,7 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 								$FAC = TRUE;
 							}
 							$prefix[0] = 'DE';
-						}else{
+						} else {
 							$prefix[0] = 'DE';
 						}
 						break;
@@ -381,17 +393,17 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 					$record = $link->getRegistrationNumber($_SESSION['idEF'], 'DE', 1, $prefix[0]);
 					
 					$sqlC = 'insert into s_de_em_cabecera 
-					(`id_emision`, `no_emision`, `id_ef`, `id_cotizacion`, 
-					`certificado_provisional`, `no_operacion`, `prefijo`, 
-					`prefix`, `cobertura`, `id_prcia`, `modalidad`, 
-					`monto_solicitado`, `moneda`, `monto_deudor`, 
-					`monto_codeudor`, `cumulo_deudor`, `cumulo_codeudor`, 
-					`id_tc`, `plazo`, `tipo_plazo`, `id_usuario`, 
-					`fecha_creacion`, `anulado`, `and_usuario`, `fecha_anulado`, 
-					`motivo_anulado`, `emitir`, `fecha_emision`, `id_compania`, 
-					`id_poliza`, `operacion`, `facultativo`, `motivo_facultativo`, 
-					`tasa`, `prima_total`, `no_copia`, `no_copia_cob`, `leido`, 
-					`id_certificado`) 
+					(id_emision, no_emision, id_ef, id_cotizacion, 
+					certificado_provisional, no_operacion, prefijo, 
+					prefix, cobertura, id_prcia, modalidad, 
+					monto_solicitado, moneda, monto_deudor, 
+					monto_codeudor, cumulo_deudor, cumulo_codeudor, 
+					id_tc, plazo, tipo_plazo, id_usuario, 
+					fecha_creacion, anulado, and_usuario, fecha_anulado, 
+					motivo_anulado, emitir, fecha_emision, id_compania, 
+					id_poliza, operacion, facultativo, motivo_facultativo, 
+					tasa, prima_total, no_copia, no_copia_cob, leido, 
+					id_certificado) 
 					values 
 					("'.$ID.'", '.$record.', "'.base64_decode($_SESSION['idEF']).'", 
 					"'.$idc.'", '.$cp.', "'.$dcr_opp.'", "'.$prefix[0].'", '.$arrPrefix.', 
@@ -408,11 +420,18 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 					$sqlCL = '';
 					
 					$sqlD = 'INSERT INTO s_de_em_detalle 
-						(`id_detalle`, `id_emision`, `id_cliente`, `porcentaje_credito`, `titular`) 
+						(id_detalle, id_emision, id_cliente, porcentaje_credito, 
+							titular, vg, vg_id) 
 						VALUES ';
+
+					$sql_vg = 'insert into s_vg_em_cabecera 
+						(vg_id, id_compania, monto, tasa, respuesta, aprobado)
+						values ';
 						
 					$sqlBN = 'INSERT INTO s_de_beneficiario 
-						(`id_beneficiario`, `id_detalle`, `cobertura`, `paterno`, `materno`, `nombre`, `ci`, `id_depto`, `edad`, `parentesco`) VALUES ';
+						(id_beneficiario, id_detalle, cobertura, paterno, materno, 
+							nombre, ci, id_depto, edad, parentesco) 
+						VALUES ';
 					
 					$k = 0;
 					while($k < $nCl){
@@ -435,26 +454,26 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 								$rsSCl->free();
 								
 								$sqlCL .= 'UPDATE s_cliente 
-								SET `paterno` = "'.$arr_cl[$k]['cl-patern'].'", `materno` = "'.$arr_cl[$k]['cl-matern'].'", 
-									`nombre` = "'.$arr_cl[$k]['cl-name'].'", `ap_casada` = "'.$arr_cl[$k]['cl-married'].'", 
-									`fecha_nacimiento` = "'.$arr_cl[$k]['cl-date'].'", 
-									`lugar_nacimiento` = "'.$arr_cl[$k]['cl-place-birth'].'", 
-									`extension` = '.$arr_cl[$k]['cl-ext'].', `complemento` = "'.$arr_cl[$k]['cl-comp'].'", 
-									`tipo_documento` = "'.$arr_cl[$k]['cl-type-doc'].'", 
-									`estado_civil` = "'.$arr_cl[$k]['cl-status'].'", 
-									`lugar_residencia` = '.$arr_cl[$k]['cl-place-res'].', 
-									`localidad` = "'.$arr_cl[$k]['cl-locality'].'", `avenida` = "'.$arr_cl[$k]['cl-avc'].'", 
-									`direccion` = "'.$arr_cl[$k]['cl-address-home'].'", 
-									`no_domicilio` = "'.$arr_cl[$k]['cl-nhome'].'", 
-									`direccion_laboral` = "'.$arr_cl[$k]['cl-address-work'].'", 
-									`pais` = "'.$arr_cl[$k]['cl-country'].'", `id_ocupacion` = "'.$arr_cl[$k]['cl-occupation'].'", 
-									`desc_ocupacion` = "'.$arr_cl[$k]['cl-desc-occ'].'", 
-									`telefono_domicilio` = "'.$arr_cl[$k]['cl-phone-1'].'", 
-									`telefono_oficina` = "'.$arr_cl[$k]['cl-phone-office'].'", 
-									`telefono_celular` = "'.$arr_cl[$k]['cl-phone-2'].'", 
-									`email` = "'.$arr_cl[$k]['cl-email'].'", `genero` = "'.$arr_cl[$k]['cl-gender'].'", 
-									`edad` = '.$arr_cl[$k]['cl-age'].', `mano` = "'.$arr_cl[$k]['cl-hand'].'", 
-									`peso` = '.$arr_cl[$k]['cl-weight'].', `estatura` = '.$arr_cl[$k]['cl-height'].'
+								SET paterno = "'.$arr_cl[$k]['cl-patern'].'", materno = "'.$arr_cl[$k]['cl-matern'].'", 
+									nombre = "'.$arr_cl[$k]['cl-name'].'", ap_casada = "'.$arr_cl[$k]['cl-married'].'", 
+									fecha_nacimiento = "'.$arr_cl[$k]['cl-date'].'", 
+									lugar_nacimiento = "'.$arr_cl[$k]['cl-place-birth'].'", 
+									extension = '.$arr_cl[$k]['cl-ext'].', complemento = "'.$arr_cl[$k]['cl-comp'].'", 
+									tipo_documento = "'.$arr_cl[$k]['cl-type-doc'].'", 
+									estado_civil = "'.$arr_cl[$k]['cl-status'].'", 
+									lugar_residencia = '.$arr_cl[$k]['cl-place-res'].', 
+									localidad = "'.$arr_cl[$k]['cl-locality'].'", avenida = "'.$arr_cl[$k]['cl-avc'].'", 
+									direccion = "'.$arr_cl[$k]['cl-address-home'].'", 
+									no_domicilio = "'.$arr_cl[$k]['cl-nhome'].'", 
+									direccion_laboral = "'.$arr_cl[$k]['cl-address-work'].'", 
+									pais = "'.$arr_cl[$k]['cl-country'].'", id_ocupacion = "'.$arr_cl[$k]['cl-occupation'].'", 
+									desc_ocupacion = "'.$arr_cl[$k]['cl-desc-occ'].'", 
+									telefono_domicilio = "'.$arr_cl[$k]['cl-phone-1'].'", 
+									telefono_oficina = "'.$arr_cl[$k]['cl-phone-office'].'", 
+									telefono_celular = "'.$arr_cl[$k]['cl-phone-2'].'", 
+									email = "'.$arr_cl[$k]['cl-email'].'", genero = "'.$arr_cl[$k]['cl-gender'].'", 
+									edad = '.$arr_cl[$k]['cl-age'].', mano = "'.$arr_cl[$k]['cl-hand'].'", 
+									peso = '.$arr_cl[$k]['cl-weight'].', estatura = '.$arr_cl[$k]['cl-height'].'
 								WHERE id_cliente = "'.$rowSCl['idCl'].'" ;';
 								
 								$arr_cl[$k]['cl-id'] = $rowSCl['idCl'];
@@ -464,52 +483,69 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 						
 						if($flagCl === FALSE){
 							$sqlCL .= 'INSERT INTO s_cliente 
-						(`id_cliente`, `id_ef`, `tipo`, `razon_social`, `paterno`, `materno`, `nombre`, `ap_casada`, `fecha_nacimiento`, `lugar_nacimiento`, `ci`, `extension`, `complemento`, `tipo_documento`, `estado_civil`, `ci_archivo`, `lugar_residencia`, `localidad`, `avenida`, `direccion`, `no_domicilio`, `direccion_laboral`, `pais`, `id_ocupacion`, `desc_ocupacion`, `telefono_domicilio`, `telefono_oficina`, `telefono_celular`, `email`, `peso`, `estatura`, `genero`, `edad`, `mano`) 
-						VALUES ("'.$arr_cl[$k]['cl-id'].'", "'.base64_decode($_SESSION['idEF']).'", 0, "", 
-							"'.$arr_cl[$k]['cl-patern'].'", "'.$arr_cl[$k]['cl-matern'].'", "'.$arr_cl[$k]['cl-name'].'", 
-							"'.$arr_cl[$k]['cl-married'].'", "'.$arr_cl[$k]['cl-date'].'", "'.$arr_cl[$k]['cl-place-birth'].'", 
-							"'.$arr_cl[$k]['cl-doc-id'].'", '.$arr_cl[$k]['cl-ext'].', "'.$arr_cl[$k]['cl-comp'].'", 
-							"'.$arr_cl[$k]['cl-type-doc'].'", "'.$arr_cl[$k]['cl-status'].'", "", '.$arr_cl[$k]['cl-place-res'].', 
-							"'.$arr_cl[$k]['cl-locality'].'", "'.$arr_cl[$k]['cl-avc'].'", "'.$arr_cl[$k]['cl-address-home'].'", 
-							"'.$arr_cl[$k]['cl-nhome'].'", "'.$arr_cl[$k]['cl-address-work'].'", "'.$arr_cl[$k]['cl-country'].'", 
-							"'.$arr_cl[$k]['cl-occupation'].'", "'.$arr_cl[$k]['cl-desc-occ'].'", "'.$arr_cl[$k]['cl-phone-1'].'", 
-							"'.$arr_cl[$k]['cl-phone-office'].'", "'.$arr_cl[$k]['cl-phone-2'].'", "'.$arr_cl[$k]['cl-email'].'", 
-							'.$arr_cl[$k]['cl-weight'].', '.$arr_cl[$k]['cl-height'].', "'.$arr_cl[$k]['cl-gender'].'", 
-							'.$arr_cl[$k]['cl-age'].', "'.$arr_cl[$k]['cl-hand'].'") ;';
+						(id_cliente, id_ef, tipo, razon_social, paterno, materno, 
+							nombre, ap_casada, fecha_nacimiento, lugar_nacimiento, 
+							ci, extension, complemento, tipo_documento, estado_civil, 
+							ci_archivo, lugar_residencia, localidad, avenida, direccion, 
+							no_domicilio, direccion_laboral, pais, id_ocupacion, 
+							desc_ocupacion, telefono_domicilio, telefono_oficina, 
+							telefono_celular, email, peso, estatura, genero, edad, mano) 
+						VALUES ("'.$arr_cl[$k]['cl-id'].'", 
+							"'.base64_decode($_SESSION['idEF']).'", 0, "", 
+							"'.$arr_cl[$k]['cl-patern'].'", 
+							"'.$arr_cl[$k]['cl-matern'].'", 
+							"'.$arr_cl[$k]['cl-name'].'", 
+							"'.$arr_cl[$k]['cl-married'].'", 
+							"'.$arr_cl[$k]['cl-date'].'", 
+							"'.$arr_cl[$k]['cl-place-birth'].'", 
+							"'.$arr_cl[$k]['cl-doc-id'].'", 
+							'.$arr_cl[$k]['cl-ext'].', 
+							"'.$arr_cl[$k]['cl-comp'].'", 
+							"'.$arr_cl[$k]['cl-type-doc'].'", 
+							"'.$arr_cl[$k]['cl-status'].'", "", 
+							'.$arr_cl[$k]['cl-place-res'].', 
+							"'.$arr_cl[$k]['cl-locality'].'", 
+							"'.$arr_cl[$k]['cl-avc'].'", 
+							"'.$arr_cl[$k]['cl-address-home'].'", 
+							"'.$arr_cl[$k]['cl-nhome'].'", 
+							"'.$arr_cl[$k]['cl-address-work'].'", 
+							"'.$arr_cl[$k]['cl-country'].'", 
+							"'.$arr_cl[$k]['cl-occupation'].'", 
+							"'.$arr_cl[$k]['cl-desc-occ'].'", 
+							"'.$arr_cl[$k]['cl-phone-1'].'", 
+							"'.$arr_cl[$k]['cl-phone-office'].'", 
+							"'.$arr_cl[$k]['cl-phone-2'].'", 
+							"'.$arr_cl[$k]['cl-email'].'", 
+							'.$arr_cl[$k]['cl-weight'].', 
+							'.$arr_cl[$k]['cl-height'].', 
+							"'.$arr_cl[$k]['cl-gender'].'", 
+							'.$arr_cl[$k]['cl-age'].', 
+							"'.$arr_cl[$k]['cl-hand'].'") ;';
+						}
+
+						if ($arr_cl[$k]['vg'] === true) {
+							$sql_vg .= '("' . $arr_cl[$k]['vg_id'] . '", 
+								"' . $arr_cl[$k]['vg_cia'] . '", 
+								"' . $arr_cl[$k]['vg_amount'] . '", 
+								"' . $arr_cl[$k]['vg_tasa'] . '", 
+								"' . $link->real_escape_string(json_encode($arr_cl[$k]['vg_response'])) . '", 
+								true),';
 						}
 						
 						$sqlD .= '("'.$arr_cl[$k]['cl-d-idd'].'", "'.$ID.'", "'.$arr_cl[$k]['cl-id'].'", 
-							100, "'.$arr_cl[$k]['cl-titular'].'"), ';
+							100, "'.$arr_cl[$k]['cl-titular'].'", "' . (int)$arr_cl[$k]['vg'] . '",
+							' . $arr_cl[$k]['vg_id'] . '), ';
 						
 						$sqlBN .= '("'.$arr_cl[$k]['cl-sp-idb'].'", "'.$arr_cl[$k]['cl-d-idd'].'", 
-							"'.$arr_cl[$k]['cl-sp-cov'].'", "'.$arr_cl[$k]['cl-sp-patern'].'", "'.$arr_cl[$k]['cl-sp-matern'].'", 
-							"'.$arr_cl[$k]['cl-sp-name'].'", "'.$arr_cl[$k]['cl-sp-doc-id'].'", 
-							'.$arr_cl[$k]['cl-sp-ext'].', 0, "'.$arr_cl[$k]['cl-sp-relation'].'"), ';
-						
-						if($swMo !== false && $swDE === true){
-							$sqlBN .= '("'.$arr_cl[$k]['cl-vg-idb'].'", "'.$arr_cl[$k]['cl-d-idd'].'", 
-								"'.$arr_cl[$cont]['cl-vg-cov'].'", "'.$arr_cl[$k]['cl-vg-patern'].'", 
-								"'.$arr_cl[$k]['cl-vg-matern'].'", "'.$arr_cl[$k]['cl-vg-name'].'", 
-								"", 1, "'.$arr_cl[$k]['cl-vg-age'].'", "'.$arr_cl[$k]['cl-vg-relation'].'"), ';
-						}
-						
-						if ($swMo === false) {
-							$sqlBN .= '("'.$arr_cl[$k]['cl-pr-idb'].'", "'.$arr_cl[$k]['cl-d-idd'].'", 
-							"'.$arr_cl[$k]['cl-pr-cov'].'", "'.$arr_cl[$k]['cl-pr-patern'].'", 
-							"'.$arr_cl[$k]['cl-pr-matern'].'", "'.$arr_cl[$k]['cl-pr-name'].'", 
-							"'.$arr_cl[$k]['cl-pr-doc-id'].'", '.$arr_cl[$k]['cl-pr-ext'].', 0, 
-							"'.$arr_cl[$k]['cl-pr-relation'].'"), ';
-						
-							$sqlBN .= '("'.$arr_cl[$k]['cl-co-idb'].'", "'.$arr_cl[$k]['cl-d-idd'].'", 
-							"'.$arr_cl[$k]['cl-co-cov'].'", "'.$arr_cl[$k]['cl-co-patern'].'", 
-							"'.$arr_cl[$k]['cl-co-matern'].'", "'.$arr_cl[$k]['cl-co-name'].'", 
-							"'.$arr_cl[$k]['cl-co-doc-id'].'", '.$arr_cl[$k]['cl-co-ext'].', 0, 
-							"'.$arr_cl[$k]['cl-co-relation'].'"), ';
-						}
+							"'.$arr_cl[$k]['cl-sp-cov'].'", "'.$arr_cl[$k]['cl-sp-patern'].'", 
+							"'.$arr_cl[$k]['cl-sp-matern'].'", "'.$arr_cl[$k]['cl-sp-name'].'", 
+							"'.$arr_cl[$k]['cl-sp-doc-id'].'", '.$arr_cl[$k]['cl-sp-ext'].', 0, 
+							"'.$arr_cl[$k]['cl-sp-relation'].'"), ';
 					}
 					
 					$sqlCL = trim(trim($sqlCL),',');
 					$sqlD = trim(trim($sqlD),',');
+					$sql_vg = trim(trim($sql_vg),',') . ';';
 					$sqlBN = trim(trim($sqlBN),',');
 					$sqlCL .= ' ;';
 					$sqlD .= ' ;';
@@ -524,48 +560,65 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 							}while($link->next_result());
 							
 							if($swCl === FALSE){
-								if($link->query($sqlD) === TRUE){
-									if($link->query($sqlBN) === TRUE){
-										$sw_UQs = FALSE;
-										$k = 0;
-										while($k < $nCl){
-											$k += 1;
-											$sqlQs = 'INSERT INTO s_de_em_respuesta (`id_respuesta`, `id_detalle`, `respuesta`, `observacion`, `enfermedad`, `fecha_tratamiento`, `duracion`, `tratante`, `estado`) 
-												SELECT "'.uniqid('@S#1$2013'.$k, true).'", "'.$arr_cl[$k]['cl-d-idd'].'", `respuesta`, "'.$arr_cl[$k]['cl-q-resp'].'", `enfermedad`, `fecha_tratamiento`, `duracion`, `tratante`, `estado` FROM s_de_cot_respuesta WHERE id_respuesta = "'.$arr_cl[$k]['cl-q-idr'].'" AND id_detalle = "'.$arr_cl[$k]['cl-q-idd'].'" ;';
-											
-											/*
-											$sqlQs = 'UPDATE s_de_respuesta 
-												SET `observacion` = "'.$arr_cl[$k]['cl-q-resp'].'"
-												WHERE id_respuesta = '.$arr_cl[$k]['cl-q-idr'].' AND 
-													id_detalle = "'.$arr_cl[$k]['cl-q-idd'].'" ;';
-											*/
-											
-											if($link->query($sqlQs) === TRUE) {
-												$sw_UQs = TRUE;
-											} else {
-												$sw_UQs = FALSE;
-											}
-										}
-										if($sw_UQs === TRUE){
-											$arrDE[0] = 1;
-											$arrDE[1] = 'de-quote.php?ms='.$ms.'&page='.$page.'&pr='.$pr.'&ide='.base64_encode($ID).'&flag='.md5('i-read').'&cia='.base64_encode($dcr_cia).'';
-											$arrDE[2] = 'La Póliza fue registrada con exito';
-										}else {
-											$arrDE[2] = 'No se pudo actualizar las Observaciones de las respuestas'.$sqlQs;
-										}
-									}else {
-										$arrDE[2] = 'No se pudo registrar a los Beneficiarios';
+								if ($vg_token === true) {
+									if ($link->query($sql_vg) === true) {
+										goto InsertDetail;
+									} else {
+										$arrDE[2] = 'No se pudo registrar el detalle VG.';
 									}
-								}else {
-									$arrDE[2] = 'No se pudo registrar el Detalle';
+								} else {
+									InsertDetail:
+									if($link->query($sqlD) === TRUE){
+										if($link->query($sqlBN) === TRUE){
+											$sw_UQs = FALSE;
+											$k = 0;
+											while($k < $nCl){
+												$k += 1;
+												$sqlQs = 'INSERT INTO s_de_em_respuesta 
+													(id_respuesta, id_detalle, respuesta, observacion, 
+														enfermedad, fecha_tratamiento, duracion, 
+														tratante, estado) 
+													SELECT "'.uniqid('@S#1$2013'.$k, true).'", 
+													"'.$arr_cl[$k]['cl-d-idd'].'", respuesta, 
+													"'.$arr_cl[$k]['cl-q-resp'].'", enfermedad, 
+													fecha_tratamiento, duracion, tratante, 
+													estado 
+													FROM s_de_cot_respuesta 
+													WHERE id_respuesta = "'.$arr_cl[$k]['cl-q-idr'].'" 
+														AND id_detalle = "'.$arr_cl[$k]['cl-q-idd'].'" ;';
+												
+												if($link->query($sqlQs) === TRUE) {
+													$sw_UQs = TRUE;
+												} else {
+													$sw_UQs = FALSE;
+												}
+											}
+
+											if($sw_UQs === TRUE){
+												$arrDE[0] = 1;
+												$arrDE[1] = 'de-quote.php?ms=' . $ms 
+													. '&page=' . $page . '&pr=' . $pr 
+													. '&ide=' . base64_encode($ID) 
+													. '&flag=' . md5('i-read') 
+													. '&cia=' . base64_encode($dcr_cia);
+												$arrDE[2] = 'La Póliza fue registrada con exito';
+											} else {
+												$arrDE[2] = 'No se pudo actualizar las Observaciones de las respuestas'.$sqlQs;
+											}
+										} else {
+											$arrDE[2] = 'No se pudo registrar a los Beneficiarios';
+										}
+									} else {
+										$arrDE[2] = 'No se pudo registrar el Detalle';
+									}
 								}
-							}else {
+							} else {
 								$arrDE[2] = 'No se pudo registrar a los Titulares';
 							}
-						}else {
+						} else {
 							$arrDE[2] = 'No se pudo registrar a los Titulares';
 						}
-					}else {
+					} else {
 						$arrDE[2] = 'La Póliza no pudo ser registrada ';
 					}
 				} elseif($sw === 3){
@@ -580,7 +633,7 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 						} elseif($CU === FALSE && ($IMC === TRUE || $QS === TRUE)) {
 							$FAC = TRUE;
 						}
-					}else{
+					} else {
 						if($CU === TRUE) {
 							$FAC = TRUE;
 						} elseif($CU === FALSE) {
@@ -590,15 +643,15 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 					///////////////////////////////////////
 					
 					$sqlC = 'update s_de_em_cabecera 
-					set `no_operacion` = "'.$dcr_opp.'", `id_prcia` = '.$dcr_prcia.', 
-						`modalidad` = '.$dcr_modality.', `monto_solicitado` = '.$dcr_amount.', 
-						`moneda` = "'.$dcr_currency.'", `monto_deudor` = '.$dcr_amount_de.', 
-						`monto_codeudor` = '.$dcr_amount_cc.', `cumulo_deudor` = '.$dcr_amount_acc.', 
-						`cumulo_codeudor` = '.$dcr_amount_acc_2.', `plazo` = '.$dcr_term.', 
-						`tipo_plazo` = "'.$dcr_type_term.'", `id_poliza` = '.$dcr_policy.', 
-						`operacion` = "'.$dcr_type_mov.'", `facultativo` = '.(int)$FAC.', 
-						`motivo_facultativo` = "'.$fac_reason.'", `tasa` = '.$TASA.', 
-						`prima_total` = '.$PRIMA.', `leido` = false, `id_certificado` = 0
+					set no_operacion = "'.$dcr_opp.'", id_prcia = '.$dcr_prcia.', 
+						modalidad = '.$dcr_modality.', monto_solicitado = '.$dcr_amount.', 
+						moneda = "'.$dcr_currency.'", monto_deudor = '.$dcr_amount_de.', 
+						monto_codeudor = '.$dcr_amount_cc.', cumulo_deudor = '.$dcr_amount_acc.', 
+						cumulo_codeudor = '.$dcr_amount_acc_2.', plazo = '.$dcr_term.', 
+						tipo_plazo = "'.$dcr_type_term.'", id_poliza = '.$dcr_policy.', 
+						operacion = "'.$dcr_type_mov.'", facultativo = '.(int)$FAC.', 
+						motivo_facultativo = "'.$fac_reason.'", tasa = '.$TASA.', 
+						prima_total = '.$PRIMA.', leido = false, id_certificado = 0
 					where id_emision = "'.$ide.'" ;';
 					
 					$sw_UCl = false;
@@ -614,25 +667,25 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 							$k += 1;
 							
 							$sqlCL = 'UPDATE s_cliente 
-								SET `paterno` = "'.$arr_cl[$k]['cl-patern'].'", `materno` = "'.$arr_cl[$k]['cl-matern'].'", 
-									`nombre` = "'.$arr_cl[$k]['cl-name'].'", `ap_casada` = "'.$arr_cl[$k]['cl-married'].'", 
-									`fecha_nacimiento` = "'.$arr_cl[$k]['cl-date'].'", 
-									`lugar_nacimiento` = "'.$arr_cl[$k]['cl-place-birth'].'", 
-									`extension` = '.$arr_cl[$k]['cl-ext'].', `complemento` = "'.$arr_cl[$k]['cl-comp'].'", 
-									`tipo_documento` = "'.$arr_cl[$k]['cl-type-doc'].'", 
-									`estado_civil` = "'.$arr_cl[$k]['cl-status'].'", 
-									`lugar_residencia` = '.$arr_cl[$k]['cl-place-res'].', 
-									`localidad` = "'.$arr_cl[$k]['cl-locality'].'", `avenida` = "'.$arr_cl[$k]['cl-avc'].'", 
-									`direccion` = "'.$arr_cl[$k]['cl-address-home'].'", 
-									`no_domicilio` = "'.$arr_cl[$k]['cl-nhome'].'", 
-									`direccion_laboral` = "'.$arr_cl[$k]['cl-address-work'].'", 
-									`pais` = "'.$arr_cl[$k]['cl-country'].'", `id_ocupacion` = "'.$arr_cl[$k]['cl-occupation'].'", 
-									`desc_ocupacion` = "'.$arr_cl[$k]['cl-desc-occ'].'", 
-									`telefono_domicilio` = "'.$arr_cl[$k]['cl-phone-1'].'", 
-									`telefono_oficina` = "'.$arr_cl[$k]['cl-phone-office'].'", 
-									`telefono_celular` = "'.$arr_cl[$k]['cl-phone-2'].'", 
-									`email` = "'.$arr_cl[$k]['cl-email'].'", `genero` = "'.$arr_cl[$k]['cl-gender'].'", 
-									`edad` = '.$arr_cl[$k]['cl-age'].', `mano` = "'.$arr_cl[$k]['cl-hand'].'" 
+								SET paterno = "'.$arr_cl[$k]['cl-patern'].'", materno = "'.$arr_cl[$k]['cl-matern'].'", 
+									nombre = "'.$arr_cl[$k]['cl-name'].'", ap_casada = "'.$arr_cl[$k]['cl-married'].'", 
+									fecha_nacimiento = "'.$arr_cl[$k]['cl-date'].'", 
+									lugar_nacimiento = "'.$arr_cl[$k]['cl-place-birth'].'", 
+									extension = '.$arr_cl[$k]['cl-ext'].', complemento = "'.$arr_cl[$k]['cl-comp'].'", 
+									tipo_documento = "'.$arr_cl[$k]['cl-type-doc'].'", 
+									estado_civil = "'.$arr_cl[$k]['cl-status'].'", 
+									lugar_residencia = '.$arr_cl[$k]['cl-place-res'].', 
+									localidad = "'.$arr_cl[$k]['cl-locality'].'", avenida = "'.$arr_cl[$k]['cl-avc'].'", 
+									direccion = "'.$arr_cl[$k]['cl-address-home'].'", 
+									no_domicilio = "'.$arr_cl[$k]['cl-nhome'].'", 
+									direccion_laboral = "'.$arr_cl[$k]['cl-address-work'].'", 
+									pais = "'.$arr_cl[$k]['cl-country'].'", id_ocupacion = "'.$arr_cl[$k]['cl-occupation'].'", 
+									desc_ocupacion = "'.$arr_cl[$k]['cl-desc-occ'].'", 
+									telefono_domicilio = "'.$arr_cl[$k]['cl-phone-1'].'", 
+									telefono_oficina = "'.$arr_cl[$k]['cl-phone-office'].'", 
+									telefono_celular = "'.$arr_cl[$k]['cl-phone-2'].'", 
+									email = "'.$arr_cl[$k]['cl-email'].'", genero = "'.$arr_cl[$k]['cl-gender'].'", 
+									edad = '.$arr_cl[$k]['cl-age'].', mano = "'.$arr_cl[$k]['cl-hand'].'" 
 								WHERE id_cliente = "'.$arr_cl[$k]['cl-id'].'" ;';
 							
 							if($link->query($sqlCL) === TRUE) {
@@ -642,7 +695,7 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 							}
 								
 							$sqlQs = 'UPDATE s_de_em_respuesta 
-								SET `observacion` = "'.$arr_cl[$k]['cl-q-resp'].'"
+								SET observacion = "'.$arr_cl[$k]['cl-q-resp'].'"
 								WHERE id_respuesta = "'.$arr_cl[$k]['cl-q-idr'].'" AND 
 									id_detalle = "'.$arr_cl[$k]['cl-q-idd'].'" ;';
 								
@@ -653,63 +706,15 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 							}
 							
 							$sqlBN = 'UPDATE s_de_beneficiario 
-								SET `paterno` = "'.$arr_cl[$k]['cl-sp-patern'].'", `materno` = "'.$arr_cl[$k]['cl-sp-matern'].'", 
-									`nombre` = "'.$arr_cl[$k]['cl-sp-name'].'", `ci` = "'.$arr_cl[$k]['cl-sp-doc-id'].'", 
-									`id_depto` = '.$arr_cl[$k]['cl-sp-ext'].', `parentesco` ="'.$arr_cl[$k]['cl-sp-relation'].'" 
+								SET paterno = "'.$arr_cl[$k]['cl-sp-patern'].'", materno = "'.$arr_cl[$k]['cl-sp-matern'].'", 
+									nombre = "'.$arr_cl[$k]['cl-sp-name'].'", ci = "'.$arr_cl[$k]['cl-sp-doc-id'].'", 
+									id_depto = '.$arr_cl[$k]['cl-sp-ext'].', parentesco ="'.$arr_cl[$k]['cl-sp-relation'].'" 
 								WHERE id_beneficiario = "'.$arr_cl[$k]['cl-sp-idb'].'" AND cobertura = "SP" ;';
 							
 							if($link->query($sqlBN) === true) {
 								$sw_UBs = true;
 							} else {
 								$sw_UBs = false;
-							}
-							
-							if($swMo !== false && $swDE === true){
-								$sqlBN = 'UPDATE s_de_beneficiario 
-								SET `paterno` = "'.$arr_cl[$k]['cl-vg-patern'].'", `materno` = "'.$arr_cl[$k]['cl-vg-matern'].'", 
-									`nombre` = "'.$arr_cl[$k]['cl-vg-name'].'", `edad` = "'.$arr_cl[$k]['cl-vg-age'].'", 
-									`parentesco` ="'.$arr_cl[$k]['cl-vg-relation'].'"
-								WHERE id_beneficiario = "'.$arr_cl[$k]['cl-vg-idb'].'" AND cobertura = "VG" ;';
-								
-								if($link->query($sqlBN) === true) {
-									$sw_UBv = true;
-								} else {
-									$sw_UBv = false;
-								}
-							}
-
-							if ($swMo === false) {
-								$sqlBN = 'UPDATE s_de_beneficiario 
-								SET `paterno` = "'.$arr_cl[$k]['cl-pr-patern'].'", 
-									`materno` = "'.$arr_cl[$k]['cl-pr-matern'].'", 
-									`nombre` = "'.$arr_cl[$k]['cl-pr-name'].'", 
-									`ci` = "'.$arr_cl[$k]['cl-pr-doc-id'].'", 
-									`id_depto` = '.$arr_cl[$k]['cl-pr-ext'].', 
-									`parentesco` ="'.$arr_cl[$k]['cl-pr-relation'].'" 
-								WHERE id_beneficiario = "'.$arr_cl[$k]['cl-pr-idb'].'" 
-									AND cobertura = "PR" ;';
-								
-								if($link->query($sqlBN) === true) {
-									$sw_UBs = true;
-								} else {
-									$sw_UBs = false;
-								}
-								
-								$sqlBN = 'UPDATE s_de_beneficiario 
-								SET `paterno` = "'.$arr_cl[$k]['cl-co-patern'].'", 
-									`materno` = "'.$arr_cl[$k]['cl-co-matern'].'", 
-									`nombre` = "'.$arr_cl[$k]['cl-co-name'].'", 
-									`ci` = "'.$arr_cl[$k]['cl-co-doc-id'].'", 
-									`id_depto` = '.$arr_cl[$k]['cl-co-ext'].', 
-									`parentesco` ="'.$arr_cl[$k]['cl-co-relation'].'" 
-								WHERE id_beneficiario = "'.$arr_cl[$k]['cl-co-idb'].'" 
-									AND cobertura = "CO" ;';
-							
-								if($link->query($sqlBN) === true) {
-									$sw_UBs = true;
-								} else {
-									$sw_UBs = false;
-								}
 							}
 						}
 						
@@ -719,37 +724,35 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 									$arrDE[0] = 1;
 									$arrDE[1] = 'de-quote.php?ms='.$ms.'&page='.$page.'&pr='.$pr.'&ide='.base64_encode($ide).'&flag='.md5('i-read').'&cia='.base64_encode($dcr_cia).$target;
 									$arrDE[2] = 'La Póliza fue actualizada con exito !';
-								}else {
+								} else {
 									$arrDE[2] = 'No se pudo actualizar los Beneficiarios';
 								}
-							}else {
+							} else {
 								$arrDE[2] = 'No se pudo actualizar las Observaciones de las respuestas ';
 								}
-						}else {
+						} else {
 							$arrDE[2] = 'No se pudo actualizar los Titulares';
 						}
-					}else {
+					} else {
 						$arrDE[2] = 'La Póliza no pudo ser Actualizada ';
 					}
 				} elseif ($swPolicy === true) {
                     $arrDE[2] = 'Esta Póliza ya esta registrada';
                 }
-			}else{
+			} else {
 				$arrDE[2] = 'No existen Titulares';
 			}
-		}else{
+		} else {
 			$arrDE[2] = 'No se puede guardar la Póliza';
 		}
-		echo json_encode($arrDE);
-	}else{
+	} else {
 		$arrDE[2] = 'No se puede registrar la Póliza';
-		echo json_encode($arrDE);
 	}
-}else{
+} else {
 	$arrDE[2] = 'La Póliza no puede ser registrada';
-	echo json_encode($arrDE);
 }
-}else{
-	echo json_encode($arrDE);
 }
+
+echo json_encode($arrDE);
+
 ?>

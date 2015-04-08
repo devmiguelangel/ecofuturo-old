@@ -3,26 +3,15 @@ require('sibas-db.class.php');
 
 $arrDE = array(0 => 0, 1 => 'R', 2 => 'Error.');
 
-if(isset($_POST['dc-token']) 
+if (isset($_POST['dc-token']) 
 	&& isset($_POST['dc-idc']) 
 	&& isset($_POST['ms']) 
 	&& isset($_POST['page']) 
 	&& isset($_POST['pr']) 
-	&& isset($_POST['id-ef'])){
+	&& isset($_POST['id-ef'])) {
 	$swEmpty = FALSE;
 	
-	/*foreach($_POST as $key => $value){
-		if($key != 'dc-ln-matern' && $key != 'dc-phone-2' 
-				&& $key != 'dc-phone-office' && $key != 'dc-ln-married' 
-				&& $key != 'dc-comp' && $key != 'dc-email'
-				&& $key != 'dc-country' && $key != 'dc-place-birth'
-				&& $key != 'dc-locality'){
-			if(empty($value))
-				$swEmpty = TRUE;
-		}
-	}*/
-	
-	if($swEmpty === FALSE && $_POST['pr'] === base64_encode('DE|02')){
+	if ($swEmpty === FALSE && $_POST['pr'] === base64_encode('DE|02')) {
 		$link = new SibasDB();
 		
 		$idc = $link->real_escape_string(trim(base64_decode($_POST['dc-idc'])));
@@ -30,7 +19,7 @@ if(isset($_POST['dc-token'])
 		
 		$idClient = 0;
 		$flag = FALSE;
-		if(isset($_POST['dc-idCl'])){
+		if (isset($_POST['dc-idCl'])) {
 			$flag = TRUE;
 			$idClient = $link->real_escape_string(trim(base64_decode($_POST['dc-idCl'])));
 		}
@@ -63,8 +52,12 @@ if(isset($_POST['dc-token'])
         if (isset($_POST['dc-amount'])) {
             $dc_amount = $link->real_escape_string(trim(base64_decode($_POST['dc-amount'])));
         }
+        $dc_vg = 0;
+        if (isset($_POST['dc-vg'])) {
+        	$dc_vg = 1;
+        }
 		
-		if($dc_status !== 'CAS' || $dc_gender !== 'F')
+		if ($dc_status !== 'CAS' || $dc_gender !== 'F')
 			$dc_lnmarried = '';
 		
 		$ms = $link->real_escape_string(trim($_POST['ms']));
@@ -76,14 +69,14 @@ if(isset($_POST['dc-token'])
 				ssh.edad_max,
 				ssh.edad_min,
 				(TIMESTAMPDIFF(year,
-					"'.$dc_birth.'",
+					"' . $dc_birth . '",
 					curdate()) between ssh.edad_min and ssh.edad_max) as flag
 			from
 				s_sgc_home as ssh
 					inner join s_entidad_financiera as sef ON (sef.id_ef = ssh.id_ef)
 			where
 				ssh.producto = "DE"
-					and sef.id_ef = "'.$idef.'"
+					and sef.id_ef = "' . $idef . '"
 					and sef.activado = true
 			;';
 		
@@ -93,141 +86,154 @@ if(isset($_POST['dc-token'])
 
 		$rowAge['flag'] = $link->verifyYearUser($rowAge['edad_min'], $rowAge['edad_max'], $dc_birth);
 		
-		if($rowAge['flag'] === true){
+		if ($rowAge['flag'] === true) {
 			$sql = '';
-			if($flag === TRUE){
+			if ($flag === TRUE) {
 				$sql = 'update s_de_cot_cliente as scl
+					inner join
+				s_de_cot_detalle as sdd ON (sdd.id_cliente = scl.id_cliente)
                 set scl.tipo = 0, scl.razon_social = "",
-                    scl.paterno = "'.$dc_lnpatern.'",
-                    scl.materno = "'.$dc_lnmatern.'",
-                    scl.nombre = "'.$dc_name.'",
-                    scl.ap_casada = "'.$dc_lnmarried.'",
-                    scl.fecha_nacimiento = "'.$dc_birth.'",
-                    scl.lugar_nacimiento = "'.$dc_place_birth.'",
-                    scl.ci = "'.$dc_doc_id.'",
-                    scl.extension = '.$dc_ext.',
-                    scl.complemento = "'.$dc_comp.'",
-                    scl.tipo_documento = "'.$dc_type_doc.'",
-                    scl.estado_civil = "'.$dc_status.'",
-                    scl.lugar_residencia = '.$dc_place_res.',
-                    scl.localidad = "'.$dc_locality.'",
-                    scl.direccion = "'.$dc_address.'",
-                    scl.pais = "'.$dc_country.'",
-                    scl.id_ocupacion = "'.$dc_occupation.'",
-                    scl.desc_ocupacion = "'.$dc_desc_occ.'",
-                    scl.telefono_domicilio = "'.$dc_phone_1.'",
-                    scl.telefono_oficina = "'.$dc_phone_office.'",
-                    scl.telefono_celular = "'.$dc_phone_2.'",
-                    scl.email = "'.$dc_email.'",
-                    scl.peso = '.$dc_weight.',
-                    scl.estatura = '.$dc_height.',
-                    scl.genero = "'.$dc_gender.'",
-                    scl.edad = TIMESTAMPDIFF(YEAR, "'.$dc_birth.'", curdate()),
-                    scl.saldo_deudor = ' . $dc_amount . '
-                where scl.id_cliente = "'.$idClient.'"
+                    scl.paterno = "' . $dc_lnpatern . '",
+                    scl.materno = "' . $dc_lnmatern . '",
+                    scl.nombre = "' . $dc_name . '",
+                    scl.ap_casada = "' . $dc_lnmarried . '",
+                    scl.fecha_nacimiento = "' . $dc_birth . '",
+                    scl.lugar_nacimiento = "' . $dc_place_birth . '",
+                    scl.ci = "' . $dc_doc_id . '",
+                    scl.extension = "' . $dc_ext . '",
+                    scl.complemento = "' . $dc_comp . '",
+                    scl.tipo_documento = "' . $dc_type_doc . '",
+                    scl.estado_civil = "' . $dc_status . '",
+                    scl.lugar_residencia = "' . $dc_place_res . '",
+                    scl.localidad = "' . $dc_locality . '",
+                    scl.direccion = "' . $dc_address . '",
+                    scl.pais = "' . $dc_country . '",
+                    scl.id_ocupacion = "' . $dc_occupation . '",
+                    scl.desc_ocupacion = "' . $dc_desc_occ . '",
+                    scl.telefono_domicilio = "' . $dc_phone_1 . '",
+                    scl.telefono_oficina = "' . $dc_phone_office . '",
+                    scl.telefono_celular = "' . $dc_phone_2 . '",
+                    scl.email = "' . $dc_email . '",
+                    scl.peso = "' . $dc_weight . '",
+                    scl.estatura = "' . $dc_height . '",
+                    scl.genero = "' . $dc_gender . '",
+                    scl.edad = TIMESTAMPDIFF(YEAR, "' . $dc_birth . '", curdate()),
+                    scl.saldo_deudor = "' . $dc_amount . '",
+                    sdd.vg = "' . $dc_vg . '"
+                where 
+                	scl.id_cliente = "' . $idClient . '"
+                		and sdd.id_cotizacion = "' . $idc . '"
                 ;';
 				
-				if($link->query($sql) === TRUE){
+				if ($link->query($sql) === TRUE) {
 					$arrDE[0] = 1;
-					$arrDE[1] = 'de-quote.php?ms='.$ms.'&page='.$page.'&pr='.$pr.'&idc='.base64_encode($idc);
+					$arrDE[1] = 'de-quote.php?ms=' . $ms . '&page=' . $page 	
+						. '&pr=' . $pr . '&idc=' . base64_encode($idc);
 					$arrDE[2] = 'Los Datos se actualizaron correctamente';
-				}else{
+				} else {
 					$arrDE[2] = 'No se pudo actualizar los datos';
 				}
-			}else{
+			} else {
 				$DC = $link->number_clients($idc, $idef, FALSE);
 				$vc = $link->verify_customer($dc_doc_id, $dc_ext, $idef);
 				
 				$idd = uniqid('@S#1$2013',true);
 				
-				if($vc[0] === TRUE){
+				if ($vc[0] === TRUE) {
 					$idClient = $vc[1];
 					
 					$sql = 'update s_de_cot_cliente as scl
                     set scl.tipo = 0, scl.razon_social = "",
-                        scl.paterno = "'.$dc_lnpatern.'",
-                        scl.materno = "'.$dc_lnmatern.'",
-                        scl.nombre = "'.$dc_name.'",
-                        scl.ap_casada = "'.$dc_lnmarried.'",
-                        scl.fecha_nacimiento = "'.$dc_birth.'",
-                        scl.lugar_nacimiento = "'.$dc_place_birth.'",
-                        scl.ci = "'.$dc_doc_id.'",
-                        scl.extension = '.$dc_ext.',
-                        scl.complemento = "'.$dc_comp.'",
-                        scl.tipo_documento = "'.$dc_type_doc.'",
-                        scl.estado_civil = "'.$dc_status.'",
-                        scl.lugar_residencia = '.$dc_place_res.',
-                        scl.localidad = "'.$dc_locality.'",
-                        scl.direccion = "'.$dc_address.'",
-                        scl.pais = "'.$dc_country.'",
-                        scl.id_ocupacion = "'.$dc_occupation.'",
-                        scl.desc_ocupacion = "'.$dc_desc_occ.'",
-                        scl.telefono_domicilio = "'.$dc_phone_1.'",
-                        scl.telefono_oficina = "'.$dc_phone_office.'",
-                        scl.telefono_celular = "'.$dc_phone_2.'",
-                        scl.email = "'.$dc_email.'",
-                        scl.peso = '.$dc_weight.',
-                        scl.estatura = '.$dc_height.',
-                        scl.genero = "'.$dc_gender.'",
-                        scl.edad = TIMESTAMPDIFF(YEAR, "'.$dc_birth.'", curdate()),
-                        scl.saldo_deudor = ' . $dc_amount . '
-                    where scl.id_cliente = "'.$idClient.'"
+                        scl.paterno = "' . $dc_lnpatern . '",
+                        scl.materno = "' . $dc_lnmatern . '",
+                        scl.nombre = "' . $dc_name . '",
+                        scl.ap_casada = "' . $dc_lnmarried . '",
+                        scl.fecha_nacimiento = "' . $dc_birth . '",
+                        scl.lugar_nacimiento = "' . $dc_place_birth . '",
+                        scl.ci = "' . $dc_doc_id . '",
+                        scl.extension = "' . $dc_ext . '",
+                        scl.complemento = "' . $dc_comp . '",
+                        scl.tipo_documento = "' . $dc_type_doc . '",
+                        scl.estado_civil = "' . $dc_status . '",
+                        scl.lugar_residencia = "' . $dc_place_res . '",
+                        scl.localidad = "' . $dc_locality . '",
+                        scl.direccion = "' . $dc_address . '",
+                        scl.pais = "' . $dc_country . '",
+                        scl.id_ocupacion = "' . $dc_occupation . '",
+                        scl.desc_ocupacion = "' . $dc_desc_occ . '",
+                        scl.telefono_domicilio = "' . $dc_phone_1 . '",
+                        scl.telefono_oficina = "' . $dc_phone_office . '",
+                        scl.telefono_celular = "' . $dc_phone_2 . '",
+                        scl.email = "' . $dc_email . '",
+                        scl.peso = "' . $dc_weight . '",
+                        scl.estatura = "' . $dc_height . '",
+                        scl.genero = "' . $dc_gender . '",
+                        scl.edad = TIMESTAMPDIFF(YEAR, "' . $dc_birth . '", curdate()),
+                        scl.saldo_deudor = "' . $dc_amount . '"
+                    where scl.id_cliente = "' . $idClient . '"
                     ;';
-				}else{
+				} else {
 					$idClient = uniqid('@S#1$2013',true);
 					
 					$sql = 'insert into s_de_cot_cliente
-					(`id_cliente`, `id_ef`, `tipo`, `razon_social`, `paterno`,
-					`materno`, `nombre`, `ap_casada`, `fecha_nacimiento`,
-					`lugar_nacimiento`, `ci`, `extension`, `complemento`,
-					`tipo_documento`, `estado_civil`, `lugar_residencia`,
-					`localidad`, `direccion`, `pais`, `id_ocupacion`,
-					`desc_ocupacion`, `telefono_domicilio`, `telefono_oficina`,
-					`telefono_celular`, `email`, `peso`, `estatura`, `genero`,
-					`edad`, `saldo_deudor` )
+						(id_cliente, id_ef, tipo, razon_social, paterno,
+						materno, nombre, ap_casada, fecha_nacimiento,
+						lugar_nacimiento, ci, extension, complemento,
+						tipo_documento, estado_civil, lugar_residencia,
+						localidad, direccion, pais, id_ocupacion,
+						desc_ocupacion, telefono_domicilio, telefono_oficina,
+						telefono_celular, email, peso, estatura, genero,
+						edad, saldo_deudor )
 					values
-					("'.$idClient.'", "'.$idef.'", 0, "", "'.$dc_lnpatern.'",
-					"'.$dc_lnmatern.'", "'.$dc_name.'", "'.$dc_lnmarried.'",
-                    "'.$dc_birth.'", "'.$dc_place_birth.'", "'.$dc_doc_id.'",
-                    '.$dc_ext.', "'.$dc_comp.'", "'.$dc_type_doc.'",
-                    "'.$dc_status.'", '.$dc_place_res.', "'.$dc_locality.'",
-                    "'.$dc_address.'", "'.$dc_country.'", "'.$dc_occupation.'",
-                    "'.$dc_desc_occ.'", "'.$dc_phone_1.'", "'.$dc_phone_office.'",
-                    "'.$dc_phone_2.'", "'.$dc_email.'", '.$dc_weight.',
-                    '.$dc_height.', "'.$dc_gender.'",
-                    TIMESTAMPDIFF(YEAR, "'.$dc_birth.'", curdate()), ' . $dc_amount . ') ;';
+					("' . $idClient . '", "' . $idef . '", 0, "", 
+						"' . $dc_lnpatern . '", "' . $dc_lnmatern . '", 
+						"' . $dc_name . '", "' . $dc_lnmarried . '",
+	                    "' . $dc_birth . '", "' . $dc_place_birth . '", 
+	                    "' . $dc_doc_id . '", "' . $dc_ext . '", 
+	                    "' . $dc_comp . '", "' . $dc_type_doc . '",
+	                    "' . $dc_status . '", ' . $dc_place_res . ', 
+	                    "' . $dc_locality . '", "' . $dc_address . '", 
+	                    "' . $dc_country . '", "' . $dc_occupation . '",
+	                    "' . $dc_desc_occ . '", "' . $dc_phone_1 . '", 
+	                    "' . $dc_phone_office . '", "' . $dc_phone_2 . '", 
+	                    "' . $dc_email . '", "' . $dc_weight . '",
+	                    "' . $dc_height . '", "' . $dc_gender . '",
+	                    TIMESTAMPDIFF(YEAR, "' . $dc_birth . '", curdate()), 
+	                    "' . $dc_amount . '")
+					;';
 				}
 				
-				if($link->query($sql) === true){
+				if ($link->query($sql) === true) {
 					$sqlDet = 'insert into s_de_cot_detalle
-                    (`id_detalle`, `id_cotizacion`, `id_cliente`,
-                    `porcentaje_credito`, `titular`)
+	                    (id_detalle, id_cotizacion, id_cliente,
+	                    porcentaje_credito, titular, vg)
 					values
-                    ("'.$idd.'", "'.$idc.'", "'.$idClient.'",
-                    100, "'.$DC.'") ;';
+	                    ("' . $idd . '", "' . $idc . '", "' . $idClient . '",
+	                    100, "' . $DC . '", "' . $dc_vg . '") ;';
 					
 					if ($link->query($sqlDet) === TRUE) {
 						$arrDE[0] = 1;
-						$arrDE[1] = 'de-quote.php?ms='.$ms.'&page='.$page.'&pr='.$pr.'&idc='.base64_encode($idc);
+						$arrDE[1] = 'de-quote.php?ms=' . $ms . '&page=' . $page 
+							. '&pr=' . $pr . '&idc=' . base64_encode($idc);
 						$arrDE[2] = 'Cliente registrado con Exito';
 					} else {
 						$arrDE[2] = 'No se pudo registrar el Detalle';
 					}
-				}else{
+				} else {
 					$arrDE[2] = 'No se pudo registrar el Cliente';
 				}
 			}
-		}else{
+		} else {
 			$arrDE[2] = 'La Fecha de Nacimiento no esta en el rango permitido de Edades [ ' 
 				. $rowAge['edad_min'] . ' - ' . $rowAge['edad_max'] . ' ]';
 		}
-		echo json_encode($arrDE);
-	}else{
+	} else {
 		$arrDE[2] = 'Error .';
-		echo json_encode($arrDE);
 	}
-}else{
+} else {
 	$arrDE[2] = 'Error!';
-	echo json_encode($arrDE);
 }
+
+echo json_encode($arrDE);
+
 ?>

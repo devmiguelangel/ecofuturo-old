@@ -1,4 +1,5 @@
 <?php
+
 require('sibas-db.class.php');
 
 $arrDE = array(0 => 0, 1 => 'R', 2 => '');
@@ -9,7 +10,7 @@ if(isset($_POST['dq-idc']) && isset($_POST['ms']) && isset($_POST['page']) && is
 	foreach($_POST as $key => $value){
 		if($key != 'dq-resp-1' && $key != 'dq-resp-2'){
 			if($value === '')
-				$swEmpty = TRUE;
+				$swEmpty = true;
 		}
 	}
 	
@@ -28,84 +29,94 @@ if(isset($_POST['dq-idc']) && isset($_POST['ms']) && isset($_POST['page']) && is
 		$page = $link->real_escape_string(trim($_POST['page']));
 		$pr = $link->real_escape_string(trim($_POST['pr']));
 		
-		$nCl = $link->number_clients($idc, $idef, TRUE);
+		$nCl = $link->number_clients($idc, $idef, true);
 		
 		if($nCl > 0 && $nCl <= $max_item){
-			$flag_1 = FALSE;
-			$flag_2 = FALSE;
-			
-			$resp_1 = $link->real_escape_string(trim($_POST['dq-resp-1']));
-			$resp_2 = '';
-			
-			$idd_1 = $link->real_escape_string(trim(base64_decode($_POST['dq-idd-1'])));
-			$idd_2 = '';
-			
-			$arr_QR_1 = array();	$arr_QR_2 = array();
+			$flag = array();
+			$resp = array();
+			$idd = array();
+			$arr_QR = array();
+
+			for ($i = 1; $i <= $nCl; $i++) {
+				$flag[$i] = false;
+				$resp[$i] = $link->real_escape_string(trim($_POST['dq-resp-' . $i]));
+				$idd[$i] = $link->real_escape_string(trim(base64_decode($_POST['dq-idd-' . $i])));
+
+				$arr_QR[$i] = array();
+			}
 			
 			if (($rsQs = $link->get_question(base64_encode($idef))) !== FALSE) {
-				$rsQs->data_seek(0);
-				$i = 0;
-				while($rowQs = $rsQs->fetch_array(MYSQLI_ASSOC)){
-					$i += 1;
-					$valPr = $link->real_escape_string(trim($_POST['dq-qs-1-'.$rowQs['id_pregunta']]));
-					
-					if($rowQs['respuesta'] !== $valPr)
-						$flag_1 = TRUE;
-					
-					$arr_QR_1[$rowQs['id_pregunta']] = $rowQs['id_pregunta'].'|'.$valPr;
-				}
-				
-				if($nCl === $max_item){
-					$resp_2 = $link->real_escape_string(trim($_POST['dq-resp-2']));
-					$idd_2 = $link->real_escape_string(trim(base64_decode($_POST['dq-idd-2'])));
-					
-					$rsQs->data_seek(0);
-					$i = 0;
-					while($rowQs = $rsQs->fetch_array(MYSQLI_ASSOC)){
-						$i += 1;
-						$valPr = $link->real_escape_string(trim($_POST['dq-qs-2-'.$rowQs['id_pregunta']]));
-						
-						if($rowQs['respuesta'] !== $valPr)
-							$flag_2 = TRUE;
+				for ($k = 1; $k <= $nCl; $k++) {
+					if ($rsQs->data_seek(0) === true) {
+						$i = 0;
+						while($rowQs = $rsQs->fetch_array(MYSQLI_ASSOC)){
+							$i += 1;
+
+							$valPr = $link->real_escape_string(trim($_POST['dq-qs-' . $k 
+								. '-' . $rowQs['id_pregunta']]));
 							
-						$arr_QR_2[$rowQs['id_pregunta']] = $rowQs['id_pregunta'].'|'.$valPr;
+							if($rowQs['respuesta'] !== $valPr) {
+								$flag[$k] = true;
+							}
+							
+							$arr_QR[$k][$rowQs['id_pregunta']] = $rowQs['id_pregunta'] . '|' . $valPr;
+						}
+					}
+
+				}
+
+				$sql = 'insert into s_de_cot_respuesta 
+					(id_respuesta, id_detalle, respuesta, observacion) 
+					values ';
+				
+				for ($i = 1; $i <= $nCl; $i++) {
+					if ($flag[$i] === false) {
+						$resp[$i] = '';
+					}
+
+					$sql .= '("' . uniqid('@S#1$2013-' . $i, true) . '", 
+						"' . $idd[$i] . '", 
+						"' . $link->real_escape_string(json_encode($arr_QR[$i])) . '", 
+						"' . $resp[$i] . '")';
+
+					if ($i === $nCl) {
+						$sql .= ';';
+					} else {
+						$sql .= ',';
 					}
 				}
-				
-				if($flag_1 === FALSE)
-					$resp_1 = '';
-				
-				if($flag_2 === FALSE)
-					$resp_2 = '';
-				
-				$sql = 'INSERT INTO s_de_cot_respuesta 
-					(`id_respuesta`, `id_detalle`, `respuesta`, `observacion`) VALUES 
-					("'.uniqid('@S#1$2013-1',true).'", "'.$idd_1.'", "'.$link->real_escape_string(json_encode($arr_QR_1)).'", "'.$resp_1.'") ';
-				
-				if($nCl === $max_item){
-					$sql .= ', ("'.uniqid('@S#1$2013-1',true).'", "'.$idd_2.'", "'.$link->real_escape_string(json_encode($arr_QR_2)).'", "'.$resp_2.'") ';
-				}
-				
-				$sql .= ';';
+
 				//echo $sql;
-				if($link->query($sql) === TRUE){
-					$arrDE[0] = 1;
-					$arrDE[1] = 'de-quote.php?ms='.$ms.'&page='.$page.'&pr='.base64_encode('DE|04').'&idc='.base64_encode($idc);
-					$arrDE[2] = 'Las respuestas se registraron correctamente';
-				}else{
+				if($link->query($sql) === true){
+					if ($nCl > 4) {
+						$nCl = 4;
+					}
+
+					$sql_taps = 'update s_de_cot_cabecera
+					set tasa = "' . $link->tasa_aps[$nCl] . '"
+					where id_cotizacion = "' . $idc . '"
+					;';
+
+					if ($link->query($sql_taps) === true) {
+						$arrDE[0] = 1;
+						$arrDE[1] = 'de-quote.php?ms=' . $ms . '&page=' . $page 
+							. '&pr=' . base64_encode('DE|04') . '&idc=' . base64_encode($idc);
+						$arrDE[2] = 'Las respuestas se registraron correctamente';
+					} else {
+						$arrDE[2] = 'La Tasa no fue Actualizada';
+					}
+				} else {
 					$arrDE[2] = 'Error al registrar las respuestas';
 				}
-			}else{
+			} else {
 				$arrDE[2] = 'No existen Preguntas';
 			}
-		}else{
+		} else {
 			$arrDE[2] = 'No se pueden registrar la respuestas';
 		}
-		echo json_encode($arrDE);
-	}else{
-		echo json_encode($arrDE);
 	}
-}else{
-	echo json_encode($arrDE);
 }
+
+echo json_encode($arrDE);
+
 ?>
