@@ -6,7 +6,7 @@ require_once('certificate-sibas-query.class.php');
  * 
  */
 class CertificateSibas extends CertificateQuery{
-	private $title, $subject, $formatPdf, $namePdf, $linkExtra = '';
+	private $title, $subject, $formatPdf, $orientation, $namePdf, $linkExtra = '';
 	public $host = NULL, $address = NULL, $mod = NULL;
 	
 	public function __construct($ide, $idc, $idcia, $product, $type, 
@@ -14,6 +14,7 @@ class CertificateSibas extends CertificateQuery{
 			
 		$this->error = TRUE;
 		$this->formatPdf = 'Legal';
+		$this->orientation = 'P';
 		
 		$this->cx = new SibasDB();
 		
@@ -135,6 +136,13 @@ class CertificateSibas extends CertificateQuery{
 						$this->subject = 'Certificado Vida Grupo No. '.$this->rowPo['no_emision'];
 						break;
 					}
+				} elseif ($this->category === 'VGC') {
+					$this->formatPdf = 'Letter';
+					switch ($this->product) {
+					case 'DE':
+						$this->subject = 'Certificado Vida en Grupo No. ' . $this->rowPo['no_emision'];
+						break;
+					}
 				}
 			}
 			
@@ -248,12 +256,17 @@ class CertificateSibas extends CertificateQuery{
 					$this->namePdf = 'certificado_vida_grupo.pdf';
 					break;
 				}
+			} elseif ($this->category === 'VGC') {
+				switch ($this->product) {
+				case 'DE':
+					$this->orientation = 'L';
+					$this->namePdf = 'certificado_vida_grupo.pdf';
+					break;
+				}
 			}
-			if($this->category === 'PEC'){
-			   $html2pdf = new HTML2PDF('L', $this->formatPdf, 'en', true, 'UTF-8', 2);
-			}else{
-			   $html2pdf = new HTML2PDF('P', $this->formatPdf, 'en', true, 'UTF-8', 2);	
-			}
+
+		  	$html2pdf = new HTML2PDF($this->orientation, $this->formatPdf, 'en', true, 'UTF-8', 2);
+			
 			$html2pdf->WriteHTML($content);
 			$html2pdf->Output($this->namePdf); 
 			return TRUE;

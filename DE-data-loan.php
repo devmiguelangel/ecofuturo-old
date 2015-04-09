@@ -25,8 +25,14 @@ $(document).ready(function(e) {
 	<label>Tipo de Cobertura: <span>*</span></label>
 	<div class="content-input">
 		<select id="dl-coverage" name="dl-coverage" class="required fbin">
-			<option value="">Seleccione...</option>
-			<option value="2">Individual/Mancomunado</option>
+<?php
+foreach ($link->coverage as $key => $value) {
+	$coverage = explode('|', $value);
+	if ($coverage[0] != 2) {
+	}
+		echo '<option value="'.$coverage[0].'">'.$coverage[1].'</option>';
+}
+?>
 		</select>
 	</div>
 	<br>

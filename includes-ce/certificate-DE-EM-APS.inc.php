@@ -1,31 +1,111 @@
 <?php
-function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason = '', $type) {
-	$conexion = $link;
-	/*
-	$prefix = json_decode($row['prefix'], true);
-	$arrModality = array (
-		'CCB' => 'CAPITAL CONSTANTE BOLIVIANOS',
-		'CCD' => 'CAPITAL CONSTANTE DOLARES',
-		'CDB' => 'CAPITAL DECRECIENTE BOLIVIANOS',
-		'CDD' => 'CAPITAL DECRECIENTE DOLARES'
-		);
-	*/
-  ob_start();
+function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason = '') {
+    $emitir = (boolean)$row['emitir'];
 
+    if ($emitir === true) {
+        $row['fecha_emision'] = $row['fecha_emision'];
+    } else {
+        $row['fecha_emision'] = $row['fecha_creacion'];
+    }
+
+    ob_start();
 ?>
-
 <div id="container-c" style="width: 785px; height: auto;
     border: 0px solid #0081C2; padding: 5px;">
     <div id="main-c" style="width: 775px; font-weight: normal; font-size: 12px;
         font-family: Arial, Helvetica, sans-serif; color: #000000;">
-
 <?php
-  $num_titulares = $rsDt->num_rows;
+    $nCl = $rsDt->num_rows;
+    $_coverage = (int)$row['cobertura'];
 
-  $k = 0;
-  while($regi = $rsDt->fetch_array(MYSQLI_ASSOC)){
- 	 	 $k += 1;
-        switch ($row['tipo_moneda']) {
+    $coverage = array('', '', '');
+    switch ($_coverage) {
+    case 1:
+        if ($nCl === 1) {
+            $coverage[0] = 'X';
+        } elseif ($nCl === 2) {
+            $coverage[1] = 'X';
+        }
+        break;
+    case 2:
+        $coverage[2] = 'X';
+        break;
+    }
+
+    $k = 0;
+    while ($rowDt = $rsDt->fetch_array(MYSQLI_ASSOC)) {
+        $show_fac = true;
+        $show_tit = true;
+        $k += 1;
+
+        $status = $rowDt['estado_civil'];
+        $from = '';
+
+        /*if ($status === 'CAS' || $status === 'VIU') {
+            $rowDt['materno'] = '';
+        } else {
+            $rowDt['ap_casada'] = '';
+        }*/
+
+        if ($_coverage === 2) {
+            if ((boolean)$rowDt['facultativo'] === true) {
+                $detalle_f = array();
+                $detalle_p = array();
+
+                $detalle_f = json_decode($rowDt['detalle_f'], true);
+
+                if ((boolean)$rowDt['aprobado'] === true && $emitir === true) {
+                    if (count($detalle_f) > 0) {
+                        Det_fac:
+                        $row['aprobado'] = $detalle_f['aprobado'];
+                        $row['tasa_recargo'] = $detalle_f['tasa_recargo'];
+                        $row['porcentaje_recargo'] = $detalle_f['porcentaje_recargo'];
+                        $row['tasa_actual'] = $detalle_f['tasa_actual'];
+                        $row['tasa_final'] = $detalle_f['tasa_final'];
+                        $row['observacion'] = $detalle_f['observacion'];
+                    }
+                } else {
+                    if ($emitir === true) {
+                        $show_tit = false;
+                        $k = $k - 1;
+                    }
+
+                    $row['motivo_facultativo'] = $rowDt['motivo_facultativo'];
+
+                    if (count($detalle_f) > 0 && $emitir === true) {
+                        goto Det_fac;
+                    }
+                    //$detalle_p = json_decode($rowDt['detalle_p'], true);
+
+                    // if (count($detalle_p) > 0) {
+                    // }
+                }
+            } else {
+                $show_fac = false;
+            }
+        }
+
+        $ci = array('', '');
+        switch ($rowDt['tipo_documento']) {
+        case 'CI':
+            $ci[0] = 'X';
+            break;
+        default:
+            $ci[1] = 'X';
+            break;
+        }
+
+        $sex = array('', '');
+        switch ($rowDt['genero']) {
+        case 'M':
+            $sex[0] = 'X';
+            break;
+        case 'F':
+            $sex[1] = 'X';
+            break;
+        }
+		
+        switch ($row['moneda']) {
         case 'USD':
             $currency = 'Dolares';
             break;
@@ -33,18 +113,22 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
             $currency = 'Bolivianos';
             break;
         }
-  
-?>   
+
+        $res = json_decode($rowDt['respuesta'], true);
+        $obs = json_decode($rowDt['observacion'], true);
+
+        if ($show_tit === true) {
+?>
       	<div style="width: 775px; border: 0px solid #FFFF00; ">
             <table
                 cellpadding="0" cellspacing="0" border="0"
                 style="width: 100%; height: auto; font-family: Arial;">
                 <tr>
-                    <td style="width: 75%; text-align: left; font-style: italic;
+                    <td style="width: 80%; text-align: left; font-style: italic;
                         font-size: 100%; " >
                         Declaración de Salud y/o Solicitud de Seguro de Desgravamen
                     </td>
-                    <td style="width: 25%;">
+                    <td style="width: 20%;">
                         <img src="<?=$url;?>images/<?=$row['logo_cia'];?>"
                             height="40" class="container-logo" align="left" />
                     </td>
@@ -59,6 +143,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         font-weight: bold; ">
                         CERTIFICADO DE COBERTURA INDIVIDUAL<br>
 						SEGURO DE DESGRAVAMEN<br>
+                        APROBADO POR LA SUTORIDAD DE FISCALIZACION Y CONTROL DE PENSIONES Y SEGUROS<br />
 						Resolución Administrativa de Registro No ____________________________<br>
 						Código de Registro _____________________________________________<br>
 						PÓLIZA N° <?=$row['no_emision'];?>
@@ -77,32 +162,21 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 <tr>
                     <td style="width: 14%; height: 10px;">ASEGURADO:</td>
                     <td style="width: 34%; height: 10px; border-bottom: 1px solid #000;">
-                      <?=$row['ef_nombre'];?>                    </td>
+                        Crecer Institución Financiera de Desarrollo
+                    </td>
                     <td style="width: 2%;"></td>
-                    <td style="width: 19%; height: 10px;">MONEDA:</td>
-                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;"><?=$currency;?></td>
-                </tr>
-                <tr>
-                    <td style="width: 14%; height: 10px;">BENEFICIARIO:</td>
-                    <td style="width: 34%; height: 10px; border-bottom: 1px solid #000;"><?=$regi['nombre']. ' '.$regi['apellidos'];?></td>
-                    <td style="width: 2%;"></td>
-                    <td style="width: 19%; height: 10px;">NOMBRE INTERMEDIARIO:</td>
-                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;">Sudamericana S.R.L</td>
+                    <td style="width: 19%; height: 10px;">BENEFICIARIO:</td>
+                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;">
+						<?=$rowDt['nombre'] . ' ' . $rowDt['paterno'] . ' ' . $rowDt['materno'];?>
+                    </td>
                 </tr>
                 <tr>
                     <td style="width: 14%; height: 10px;">INICIO DE VIGENCIA:</td>
                     <td style="width: 34%; height: 10px; border-bottom: 1px solid #000;">
-                    Desde las 00:01 de. <?=date('d/m/Y', strtotime($row['fecha_emision']));?>                    </td>
+                    Desde las 00:01 de. <?=date('d/m/Y', strtotime($row['fecha_emision']));?></td>
                     <td style="width: 2%;"></td>
-                    <td style="width: 19%; height: 10px; ">DIRECCIÓN INTERMEDIARIO:</td>
-                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;">La Paz, Prolongación Cordero Nº 163 - San Jorge</td>
-                </tr>
-                <tr>
-                    <td style="width: 14%; height: 10px;">CIUDAD:</td>
-                    <td style="width: 34%; height: 10px; border-bottom: 1px solid #000;"><?=$row['user_departamento'];?></td>
-                    <td style="width: 2%;"></td>
-                    <td style="width: 19%; height: 10px;">TELÉFONO INTERMEDIARIO:</td>
-                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;">(591) -2-2433500</td>
+                    <td style="width: 19%; height: 10px; ">CIUDAD:</td>
+                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;"><?=$row['u_departamento'];?></td>
                 </tr>
             </table>
           </div>
@@ -110,9 +184,11 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
           <br>
 
           <div style="width: 775px; border: 0px solid #FFFF00; font-size: 85%;">
+            EL PRESENTE CERTIFICADO DE COBERTURA INDIVIDUAL TIENE VALIDEZ LEGAL PARA TODA ENTIDAD ASEGURADORA DE SEGUROS DE PERSONAS DEL ESTADO PLURINACIONAL DE BOLIVIA QUE OTORGUE EL SEGURO DE DESGRAVAMEN.<br /><br />
+            
             <table
                 cellpadding="0" cellspacing="0" border="0"
-                style="width: 100%; height: auto; font-weight: bold; font-family: Arial;">
+                style="width: 100%; height: auto; font-weight: bold; font-family: Arial; font-size:100%;">
                 <tr>
                     <td style="width: 100%; background: #000; color: #fff;">
                         VIGENCIA DE LA COBERTURA INDIVIDUAL DEL ASEGURADO
@@ -123,17 +199,20 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
 
             <div style="text-align:justify">La vigencia individual de la cobertura para cada 
             Asegurado será mensual renovable automáticamente, iniciándose el momento del
-            desembolso del crédito por parte de la entidad de intermediación financiera 
-            a favor del asegurado y finalizando el momento de la extinción de la
-            operación crediticia.
+            desembolso del crédito para casos de riesgo normal, y finalizando el momento de la 
+            extincion de la operacion crediticia. Cuando se trate de un caso de riesgo
+            agravado, la entrada en vigencia de al cobertura individual requiera como 
+            condicion adicional la aceptacion del riesgo de la Entidad Aseguradora.<br />
+            
             Esta vigencia se interrumpirá en caso de incumplimiento de pago de 
-            la prima correspondiente, treinta días después de la fecha de vencimiento de pago.
+            la prima correspondiente, treinta días después de la fecha en que debio
+            efectuarse el pago de la prima.
             </div>
             <br>
 
             <table
                 cellpadding="0" cellspacing="0" border="0"
-                style="width: 100%; height: auto; font-weight: bold; font-family: Arial;">
+                style="width: 100%; height: auto; font-weight: bold; font-family: Arial; font-size:100%;">
                 <tr>
                     <td style="width: 100%; background: #000; color: #fff;">
                         CAPITAL ASEGURADO
@@ -141,12 +220,12 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 </tr>
             </table>
             <br>
-            El Capital Asegurado durante la vigencia de la Póliza será el monto insoluto de la deuda de los Asegurados a favor del Beneficiario.
+            El Capital Asegurado durante la vigencia de la póliza de seguro de desgravamen es el saldo insoluto de la deuda que mantiene el asegurado con la Entidad de Intermediacion Financiera.
             <br><br>
 
             <table
                 cellpadding="0" cellspacing="0" border="0"
-                style="width: 100%; height: auto; font-weight: bold; font-family: Arial;">
+                style="width: 100%; height: auto; font-weight: bold; font-family: Arial; font-size:100%;">
                 <tr>
                     <td style="width: 100%; background: #000; color: #fff;">
                        PRIMA TOTAL
@@ -160,45 +239,33 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
 
             <table
                 cellpadding="0" cellspacing="0" border="0"
-                style="width: 100%; height: auto; font-weight: bold; font-family: Arial;">
+                style="width: 100%; height: auto; font-weight: bold; font-family: Arial; font-size:100%;">
                 <tr>
                     <td style="width: 100%; background: #000; color: #fff;">
-                      COBERTURAS Y TASAS
+                      COBERTURAS
+                   </td>
+                </tr>
+                <tr>
+                	<td>
+                    	<ol style="list-style-type:circle; font-weight:normal; background:#FFF; color:#000;">
+                            <li>Fallecimiento por Cualquier Causa</li>
+                        	<li>Invalidez Total y Permanente</li>  
+                        </ol> 
+                    </td>
+                </tr>
+            </table>
+
+            <table
+                cellpadding="0" cellspacing="0" border="0"
+                style="width: 100%; height: auto; font-size: 100%; font-weight: bold; font-family: Arial;">
+                <tr>
+                    <td style="width: 100%; background: #000; color: #fff; text-decoration:underline;">
+                       BENEFICIO DE GASTOS DE SEPELIO
                     </td>
                 </tr>
             </table>
             
-            <br>
-
-            <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; height: auto; font-weight: bold; font-family: Arial;">
-              <tr>
-                <td style="width: 25%;"></td>
-                <td style="width: 50%;">
-                    <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; height: auto; font-size: 100%;
-                                    font-weight: bold; font-family: Arial;">
-                        <tr>
-                            <td style="width: 50%; background: #000000; color: #ffffff; text-align: center; border: 1px solid #000;">COBERTURAS</td>
-                            <td style="width: 50%; background: #000000; color: #ffffff; text-align: center; border: 1px solid #000;">TASA TOTAL MENSUAL POR MIL</td>
-                        </tr>
-                        <tr>
-                            <td style="width: 50%; font-weight: normal; border-left: 1px solid #000; text-align: center">Muerte por cualquier causa</td>
-                            <td style="width: 50%; font-weight: normal; border-right: 1px solid #000; text-align: center">A</td>
-                        </tr>
-                        <tr>
-                            <td style="width: 50%; font-weight: normal; border: 1px solid #000; border-right: 0 none; border-bottom: 0 none; text-align: center">Total Tasa Total mensual por mil</td>
-                            <td style="width: 50%; font-weight: normal; border: 1px solid #000; border-left: 0 none; border-bottom: 0 none; text-align: center;">A+B</td>
-                        </tr>
-                        <tr>
-                            <td style="width: 50%; font-weight: bold; border: 1px solid #000; border-right: 0 none; text-align: center">Total Tasa Total mensual por mil</td>
-                            <td style="width: 50%; font-weight: bold; border: 1px solid #000; border-left: 0 none;  text-align: center;">A+B</td>
-                        </tr>
-                    </table>
-                </td>
-                <td style="width: 25%;"></td>
-              </tr>
-            </table>
-
-            <br><br>
+            La Entidad Aseguradora otorga el Beneficio de Gastos de Sepelio por fallecimiento del asegurado, bajo los mismos términos y condiciones de la cobertura de falleciemitno por cualquier causa, cuyo capital asegurado es de 1.5 (uno punto cinco) salarios mínimos nacionales.<br><br>
 
             <table
                 cellpadding="0" cellspacing="0" border="0"
@@ -224,7 +291,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         </tr>
                         <tr>
                             <td style="width: 50%; font-weight: normal; border: 1px solid #000; border-right: 0 none; text-align: center">Hasta Cumplir los <span style="font-weight: bold;">75</span> años</td>
-                            <td style="width: 50%; font-weight: normal; border: 1px solid #000; border-left: 0 none;  text-align: center;">Hasta Cumplir los <span style="font-weight: bold;">75</span> años</td>
+                            <td style="width: 50%; font-weight: normal; border: 1px solid #000; border-left: 0 none;  text-align: center;">Hasta Cumplir los <span style="font-weight: bold;">70</span> años</td>
                         </tr>
                     </table>
                 </td>
@@ -242,11 +309,19 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                        OBSERVACIONES
                     </td>
                 </tr>
-            </table>
-            <br>
-            Las primas de este seguro no constituyen hecho generador de tributo según el Art. No. 54 de la Ley de Seguros 1883 del 25 de junio de 1998.
+            </table>            
+            Las primas de este seguro no constituyen hecho generador de tributo según el Art. No. 54 de la Ley de Seguros 1883 del 25 de junio de 1998.<br /><br />
+            
+            <b>La siguiente información podrá encontrar en su Comprobante de pago de Crédito:
+            	<ol style="list-style-type:circle;">
+                	<li>Nombre de la Entidad Aseguradora que otorga cobertura.</li>
+                    <li>Nombre de su intermediario (Si es que se cuenta con el mismo) quien tiene la obligacion de asesorarlo en relación al presente seguro.</li>
+                    <li>Coberturas y tasas del seguro de desgravamen (precio del seguro)</li>
+                </ol>
+                De no encontrar esta información en su Comprobante de Crédito, agradeceremos consultar con su Entidad de Intermediación Financiera.
+            </b>
             <br><br>
-            Lugar y Fecha, <?=$row['user_departamento'] . ', ' . date('d/m/Y', strtotime($row['fecha_emision']));?><br>
+            Lugar y Fecha, <?=$row['u_departamento'] . ', ' . date('d/m/Y', strtotime($row['fecha_emision']));?><br>
 
 
             <br><br><br><br><br><br><br>
@@ -267,8 +342,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
 
 		<br>
 <?php
-
-       $response = array(
+        $response = array(
             1 => array('', ''),
             2 => array('', ''),
             3 => array('', ''),
@@ -278,89 +352,134 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
             7 => array('', ''),
             8 => array('', ''),
             );
-	 
-        $res_client = json_decode($regi['respuesta'], true);
 
+        $res_client = json_decode($rowDt['respuesta'], true);
+
+        $nr = 0;
         foreach ($res_client as $key => $value) {
             $res = explode('|', $value);
+            $nr += 1;
 
             switch ((int)$res[1]) {
             case 1:
-                $response[(int)$res[0]] = array('X', '');
+                $response[$nr] = array('X', '');
                 break;
             case 0:
-                $response[(int)$res[0]] = array('', 'X');
+                $response[$nr] = array('', 'X');
                 break;
             }
         }
+
+    if ($GLOBALS['rprint'] === false) {
 ?>
-        
-		<page><div style="page-break-before: always;">&nbsp;</div></page>
-				
-		<div style="width: 775px; border: 0px solid #FFFF00; ">
+        <page><div style="page-break-before: always;">&nbsp;</div></page>
+        <div style="width: 775px; border: 0px solid #FFFF00; ">
           
+            
+        <table
+            cellpadding="0" cellspacing="0" border="0"
+            style="width: 100%; height: auto; font-size: 90%; font-weight: bold; font-family: Arial;">
+            <tr>
+                <td style="width: 100%; text-align: center; font-size: 100%;
+                    font-weight: bold; ">
+                    SOLICITUD DE SEGURO Y DECLARACIÓN DE SALUD<br><br />
+                    SOLICITUD DEL SEGURO DE DESGRAVAMEN
+                </td>
+            </tr>
+        </table>
+        <br>
+
+        <div style="width: 775px; border: 0px solid #FFFF00; font-size: 85%; text-align:justify; font-family: Arial"> 
+
+            Mediante el presente formulario, en conformidad con la Declaración de Salud que precede,
+            solicito a <?=$row['compania'];?>, como Entidad Aseguradora, se le otorgue el Seguro de 
+            Desgravamen (Desgravación de Préstamo), con referencia al préstamo que al presente
+            gestiono ante <?=$row['ef_nombre'];?> de la ciudad de <?=$row['u_departamento'];?>
+            por el plazo de <?=$row['plazo'] . ' ' . $row['tipo_plazo'];?>, 
+            con destino a ............           
+            <br><br>
+            Para los efectos que corresponda declaro y doy mi absoluta conformidad a todas y cada una 
+            de las condiciones y estipulaciones establecidas por la Entidad Aseguradora, sobre concesión,
+            vigencia y caducidad del citado seguro, según el Reglamento Aprobado, obligándome a pagar 
+            las primas mensuales del seguro solicitado.
+            <br><br>
+            Yo <?=$rowDt['nombre']. ' '.$rowDt['paterno']. ' '.$rowDt['materno'];?>
+            <br><br>
+            Lugar y Fecha, <?=$row['u_departamento'] . ', ' . date('d/m/Y', strtotime($row['fecha_emision']));?>
+            
+        </div>
+        <br><br><br>
             <table
                 cellpadding="0" cellspacing="0" border="0"
                 style="width: 100%; height: auto; font-size: 90%; font-weight: bold; font-family: Arial;">
                 <tr>
-                    <td style="width: 75%;"></td>
-                    <td style="width: 25%;">
+                    <td style="width: 80%;"></td>
+                    <td style="width: 20%;">
                         <img src="<?=$url;?>images/<?=$row['logo_cia'];?>"
                             height="40" class="container-logo" align="left" />
                     </td>
                 </tr>
                 <tr>
                     <td style="width: 100%; text-align: center; font-size: 100%;
-                        font-weight: bold; " colspan="2">
-                        SOLICITUD DE SEGURO Y DECLARACIÓN DE SALUD<br>
-						DECLARACIÓN JURADA DE SALUD
+                        font-weight: bold; " colspan="2">                        
+                        DECLARACIÓN JURADA DE SALUD SEGURO DE DESGRAVAMEN
                         </td>
                 </tr>
             </table>  
                     
-			<br>
+            <br>
             
-			<table
+            <table
                 cellpadding="0" cellspacing="0" border="0"
                 style="width: 100%; height: auto; font-size: 80%; font-weight: bold; font-family: Arial;">
                 <!--<tr>
                     <td style="width: 100%; background: #000; color: #fff;" colspan="5" >
                         DATOS PERSONALES - TITULAR                    </td>
                 </tr>-->
-			    <tr>
+                <tr>
                     <td style="width: 13%; height: 10px;">Nombre Completo:</td>
                     <td style="width: 35%; height: 10px; border-bottom: 1px solid #000;">
-                    <?=$regi['nombre']. ' '.$regi['apellidos'];?>
+                    <?=$rowDt['nombre']. ' '.$rowDt['paterno']. ' '.$rowDt['materno'];?>
                     </td>
-					<td style="width: 2%;"></td>
+                    <td style="width: 2%;"></td>
                     <td style="width: 14%; height: 10px;">Capital a Asegurar:</td>
                     <td style="width: 36%; height: 10px; border-bottom: 1px solid #000;">
-                    <?php
-					 if($regi['titular_txt']==='DD'){
-						 echo number_format($row['cumulo_deudor'],2,'.',',');
-					 }elseif($regi['titular_txt']==='CC'){
-						 echo number_format($row['cumulo_codeudor'],2,'.',',');
-					 }
-				    ?>
+                    <?php if ($k === 1): ?>
+                        <?= number_format($row['cumulo_deudor'], 2, '.', ',') ;?>
+                    <?php else: ?>
+                        <?= number_format($row['cumulo_codeudor'], 2, '.', ',') ;?>
+                    <?php endif ?>
                     </td>
                 </tr>
-				<tr>
+                <tr>
                     <td style="width: 13%; height: 10px;">Carnet de Identidad:</td>
                     <td style="width: 35%; height: 10px; border-bottom: 1px solid #000;">
-                      <?=$regi['ci_document'].' '.$regi['extension'];?>                    </td>
-					<td style="width: 2%;"></td>
+                        <?=$rowDt['dni']. ' ' .$rowDt['extension'];?>
+                    </td>
+                    <td style="width: 2%;"></td>
                     <td style="width: 14%; height: 10px;">Fecha de Nacimiento:</td>
                     <td style="width: 36%; height: 10px; border-bottom: 1px solid #000;">
-                    <?=date('d/m/Y', strtotime($regi['fecha_nacimiento']));?>                    </td>
+                        <?=date('d/m/Y', strtotime($rowDt['fecha_nacimiento']));?>
+                    </td>
                 </tr>
-				<tr>
+                <tr>
                     <td style="width: 13%; height: 10px;">Entidad Financiera:</td>
                     <td style="width: 35%; height: 10px; border-bottom: 1px solid #000;">
-                      <?=$row['ef_nombre'];?>                    </td>
-					<td style="width: 2%;"></td>
+                        <?=$row['ef_nombre'];?>
+                    </td>
+                    <td style="width: 2%;"></td>
                     <td style="width: 14%; height: 10px; ">Ocupación principal:</td>
                     <td style="width: 36%; height: 10px; border-bottom: 1px solid #000;">
-                    <?=$regi['ocupacion'];?>                    </td>
+                    <?=$rowDt['ocupacion'] . ' - ' . $rowDt['desc_ocupacion'];?>                    </td>
+                </tr>
+                <tr>
+                    <td style="width: 13%; height: 10px;">Estatura:</td>
+                    <!--<td style="width: 35%; height: 10px; border-bottom: 1px solid #000;">
+                      <?=$row['ef_nombre'];?>                    </td>-->
+                    <td style="width: 2%;"></td>
+                    <td style="width: 14%; height: 10px; ">Peso:</td>
+                    <!--<td style="width: 36%; height: 10px; border-bottom: 1px solid #000;">
+                    <?=$rowDt['ocupacion'];?>                    </td>-->
                 </tr>
             </table>
            
@@ -368,9 +487,10 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                             
                 <br>
     <?php
-           if((boolean)$row['facultativo']===true){
-			   if((boolean)$row['aprobado']===true){
-		 ?>
+                if((boolean)$row['facultativo'] === true){
+                    if ($show_fac === true) {
+                        if((boolean)$rowDt['aprobado'] === true && $emitir === true){
+    ?>
                 <table border="0" cellpadding="1" cellspacing="0"
                     style="width: 100%; font-size: 8px; border-collapse: collapse;">
                     <tr>
@@ -404,13 +524,12 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         <td style="width:12%; text-align: center; background: #e78484;
                             color: #FFFFFF; border: 1px solid #dedede;"><?=$row['tasa_final'];?> %</td>
                         <td style="width:45%; text-align: justify; background: #e78484;
-                            color: #FFFFFF; border: 1px solid #dedede;"><?=$row['motivo_facultativo'];?> |<br /><?=$row['observacion'];?></td>
+                            color: #FFFFFF; border: 1px solid #dedede;"><?=$row['observacion'];?></td>
                     </tr>
                 </table>
-    	<?php
-			   }else{
-				   
-		 ?>
+    <?php
+                    } else {
+    ?>
                 <table border="0" cellpadding="1" cellspacing="0"
                     style="width: 100%; font-size: 8px; border-collapse: collapse;">
                     <tr>
@@ -427,15 +546,22 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                     </tr>
                </table>
          <?php
-            
-               }
-           }
+                    }
+                }
+            }
     ?>
             </div>
             
+   
             <table
                 cellpadding="0" cellspacing="0" border="0"
                 style="width: 100%; height: auto; font-size: 80%; font-weight: bold; font-family: Arial;">
+                <!--<tr>
+                    <td style="width: 100%; background: #000; color: #fff;" colspan="5" >
+                        DECLARACIÓN DE SALUD DE LA PERSONA (Marque la respuesta según corresponda)
+                    </td>
+                </tr>
+                -->
                 <tr>
                     <td style="width: 15%; height: 10px; "></td>
                     <td style="width: 70%;"></td>
@@ -545,7 +671,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         6&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     </td>
                     <td style="width: 70%;">
-                    	¿Tiene Sida o es portador del virus de la inmunodeficiencia humana - VIH?</td>
+                        ¿Tiene Sida o es portador del virus de la inmunodeficiencia humana - VIH?</td>
                     <td style="width: 5%; border-left: 1px solid #000; border-bottom: 1px solid #000;">
                         <div style="width: 10px; height: 10px; margin-left: 12px; border: 1px solid #000;">
                             <?=$response[6][0];?>
@@ -561,12 +687,12 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 <tr>
                     <td colspan="5">
                         <br>
-						<!--
+                        <!--
                         En caso de marcar SÍ en alguna de las preguntas 1 a 4, detallar las mismas
                         señalando además cuándo ocurrió, duración, tratamiento, fecha de curación,
                         secuelas, observaciones u otros.
-						-->
-						En caso que alguna respuesta sea afirmativa, favor especificar:
+                        -->
+                        En caso que alguna respuesta sea afirmativa, favor especificar:
                     </td>
                 </tr>
                 <!--<tr>
@@ -587,7 +713,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 <tr>
                     <td style="width: 5%;"></td>
                     <td style="width: 95%; height: 8px; border-bottom: 1px solid #000;">
-                        <?=$regi['observacion']?>
+                        <?=$rowDt['observacion'];?>
                     </td>
                 </tr>
                 <tr>
@@ -602,8 +728,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
             <br>
         </div>
 
-
-  		<div style="width: 775px; border: 0px solid #FFFF00; font-size: 85%; font-family: Arial; text-align:justify">
+        <div style="width: 775px; border: 0px solid #FFFF00; font-size: 85%; font-family: Arial; text-align:justify">
             <table
                 cellpadding="0" cellspacing="0" border="0"
                 style="width: 100%; height: auto; font-size: 100%; font-weight: bold; font-family: Arial;">
@@ -614,29 +739,30 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 </tr>
             </table>           
             <br>
-			Declaro que las respuestas que he consignado en este Formulario de Solicitud de Seguro de Desgravamen y Declaración de Salud son verdaderas y completas.
-			<br><br>
-			Autorizo, a los médicos, clínicas, hospitales y otros centros de salud que me hayan atendido para que proporcionen a la Entidad Aseguradora, todos los resultados de los informes referentes a mi salud, en caso de enfermedad o accidentes, para lo cual releva a dichos médicos y centros médicos, en relación con su secreto profesional, de toda responsabilidad en que pudiera incurrir al proporcionar tales informes.
-			<br><br><br><br><br><br>
+            Declaro que las respuestas que he consignado en este Formulario de Solicitud de Seguro de Desgravamen y Declaración de Salud son verdaderas y completas.
+            <br><br>
+            Autorizo, a los médicos, clínicas, hospitales y otros centros de salud que me hayan atendido para que proporcionen a la Entidad Aseguradora, todos los resultados de los informes referentes a mi salud, en caso de enfermedad o accidentes, para lo cual releva a dichos médicos y centros médicos, en relación con su secreto profesional, de toda responsabilidad en que pudiera incurrir al proporcionar tales informes.
+            <br><br><br><br><br><br>
             <table
                 cellpadding="0" cellspacing="0" border="0"
                 style="width: 100%; height: auto; font-size: 80%; font-weight: bold; font-family: Arial;">
                
-			    <tr>
+                <tr>
                     <td style="width: 33%; text-align: center;">N° de Crédito:_______________________________</td>
                     <td style="width: 34%;"></td>
                     <td style="width: 33%; text-align: center;;">Solicitante:________________________________</td>
                 </tr>
-			                  
-			    <tr>
+                              
+                <tr>
                     <td style="width: 33%; height: 20px;"></td>
                     <td style="width: 34%; height: 20px;"></td>
                     <td style="width: 33%; height: 20px;"></td>
                 </tr>
-			   
-			    <tr>
+               
+                <tr>
                     <td style="width: 33%;"></td>
                     <td style="width: 34%; border-top: 1px solid #000; text-align: center;">
+                        Oficial de Crédito<br />
                         (Firma y Sello)
                         <br><br>
                     </td>
@@ -644,56 +770,8 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 </tr>
             </table>
         </div>
-
-
-		<br><br><br>
-        <table
-            cellpadding="0" cellspacing="0" border="0"
-            style="width: 100%; height: auto; font-size: 90%; font-weight: bold; font-family: Arial;">
-            <tr>
-                <td style="width: 100%; text-align: center; font-size: 100%;
-                    font-weight: bold; ">
-                   	SOLICITUD DEL SEGURO DE DESGRAVAMEN
-                </td>
-            </tr>
-        </table>
-		<br>
-
-        <div style="width: 775px; border: 0px solid #FFFF00; font-size: 85%; text-align:justify; font-family: Arial"> 
-
-            Mediante el presente formulario, en conformidad con la Declaración de Salud que precede,
-            solicito a <?=$row['compania'];?>, como Entidad Aseguradora, se le otorgue el Seguro de 
-            Desgravamen (Desgravación de Préstamo), con referencia al préstamo que al presente
-            gestiono ante <?=$row['ef_nombre'];?> de la ciudad de <?=$row['user_departamento'];?>
-            por el plazo de <?= $row['tipo_plazo'];?>, 
-            con destino a ............           
-            <br><br>
-            Para los efectos que corresponda declaro y doy mi absoluta conformidad a todas y cada una 
-            de las condiciones y estipulaciones establecidas por la Entidad Aseguradora, sobre concesión,
-            vigencia y caducidad del citado seguro, según el Reglamento Aprobado, obligándome a pagar por
-            adelantado las primas mensuales del seguro solicitado.
-            <br><br>
-            En la fecha, y a tiempo de suscribir esta solicitud, dejo constancia de haber cancelado en
-            las Oficinas de la Entidad Financiera (o en Oficinas de la Entidad Aseguradora), la suma de
-            ............... que representa la primera prima mensual de dicho seguro.
-            <br><br>           
-			Empero, la recepción de la mencionada prima mensual no obliga a la Entidad Aseguradora de otorgar 
-            la cobertura correspondiente en tanto no se haya desembolsado el crédito, y no se haya 
-            efectuado previamente la calificación por parte de la Entidad Aseguradora de este formulario
-            de Declaración de Salud y Solicitud de Seguro en los términos y condiciones señalados en
-            el Condicionado General y Particular de la Póliza.
-            <br><br>
-			Yo <?=$regi['nombre']. ' '.$regi['apellidos'];?>
-            <br><br>
-			Lugar y Fecha, <?=$row['user_departamento'] . ', ' . date('d/m/Y', strtotime($row['fecha_emision']));?>
-            
-        </div>
-
 <?php
-/*
-        if ($_coverage === 2) {
-            $row['monto_solicitado'] = $rowDt['monto_bc'];
-        }
+    }
 
         $product = array('', '', '', '');
         switch ((int)$row['id_prcia']) {
@@ -713,11 +791,8 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
             $product[3] = 'X';
             break;
         }
-*/
-?>
 
-<?php
- //           if ($emitir === true) {
+            if ($emitir === true) {
 ?>
         <page><div style="page-break-before: always;">&nbsp;</div></page>
         <div style="width: 775px; border: 0px solid #FFFF00; ">
@@ -725,8 +800,8 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 cellpadding="0" cellspacing="0" border="0"
                 style="width: 100%; height: auto; font-size: 90%; font-weight: bold; font-family: Arial;">
                 <tr>
-                    <td style="width: 75%;"></td>
-                    <td style="width: 25%;">
+                    <td style="width: 80%;"></td>
+                    <td style="width: 20%;">
                         <img src="<?=$url;?>images/<?=$row['logo_cia'];?>"
                             height="40" class="container-logo" align="left" />
                     </td>
@@ -734,7 +809,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 <tr>
                     <td style="width: 100%; text-align: center; font-size: 100%;
                         font-weight: bold; " colspan="2">
-                        CONDICIONES DE LA POLIZA
+                        CONDICIONES DE LA POLIZA DE SEGURO DE DESGRAVAMEN
                         </td>
                 </tr>
             </table>
@@ -756,7 +831,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                        
                         <table 
                             cellpadding="0" cellspacing="0" border="0" 
-                            style="width: 100%; height: auto;">
+                            style="width: 100%; height: auto; font-size:100%;">
                           <tr>
                             <td style="width:3%" valign="top">&nbsp;-&nbsp;</td>
                             <td style="width:97%; text-align: justify;" ><span style="font-weight: bold;">Fallecimiento: </span>
@@ -771,7 +846,9 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                             del Asegurado que como consecuencia de una enfermedad o accidente presenta 
                             una pérdida o disminución de su fuerza física o intelectual igual o superior
                             al 60% de su capacidad de trabajo, siempre que el carácter de tal incapacidad
-                            sea reconocido y formalizado, por el Instituto Nacional de Salud Ocupacional (INSO).						
+                            sea reconocido y formalizado, por un médico calificador debidamente 
+                            registrado en la APS, o el Instituto Nacional de Salud Ocupacional (INSO) 
+                            o la Entidad Encargada de Calificar (EEC).						
                             <br>
                             Se define capacidad de trabajo como la capacidad del Asegurado para realizar
                             los actos esenciales de cualquier ocupación para la cual esté preparado de
@@ -786,7 +863,22 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         </table>
                         
                         <br>
-
+                        	
+                        <span style="font-weight: bold;">BENEFICIO DE GASTOS DE SEPELIO: </span>
+                        Sujeto a los términos y condiciones de la cobertura de fallecimiento de
+                        cualquier causa, la Entidad Aseguradora cancelará el capital asegurado del 
+                        Beneficio de Gastos de Sepelio por fallecimiento del asegurado, a las
+                        siguientes personas:
+                        
+                        <ol style="list-style-type:disc;">
+                        	<li>Dentro los 60 días hábiles posteriores al fallecimiento del asegurado, a
+                            la persona que presente la factura o recibo de los Gastos de Sepelio del 
+                            asegurado.</li>
+                            <li>Posterior a los 60 días hábiles al fallecimiento de la aseguradora, a los 
+                            derechohabientes del asegurado, caso en el cual se deberá presentar 
+                            adicionalmente la declaratoria de herederos correspondiente.</li>
+                        </ol>
+                        <br>
                                                                       
                       
                         <span style="font-weight: bold;">EXCLUSIONES DE COBERTURA: </span>
@@ -799,11 +891,11 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         
                         <table 
                             cellpadding="0" cellspacing="0" border="0" 
-                            style="width: 100%; height: auto;">
+                            style="width: 100%; height: auto;  font-size:100%;">
                           <tr>
                             <td style="width:3%" valign="top">a)&nbsp;</td>
-                            <td style="width:97%; text-align: justify">Intervención directa o indirecta del Asegurado en actos delictuosos,
-                        		que le ocasionen la muerte.</td>
+                            <td style="width:97%; text-align: justify">Intervención directa o indirecta del 
+                            	Asegurado en actos delictuosos, que le ocasionen la muerte.</td>
                           </tr>
                           <tr>
                             <td style="width:3%" valign="top">b)&nbsp;</td>
@@ -815,6 +907,10 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                           <tr>
                             <td style="width:3%" valign="top">c)&nbsp;</td>
                             <td style="width:97%; text-align: justify">Fisión, fusión nuclear o contaminación radioactiva.</td>
+                          </tr>
+                          <tr>
+                            <td style="width:3%" valign="top">d)&nbsp;</td>
+                            <td style="width:97%; text-align: justify">Suicidio causado dentro de los dos primeros años a partir del desembolso del crédito.</td>
                           </tr>
                         </table>                        
 
@@ -843,19 +939,15 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         
                         <table 
                             cellpadding="0" cellspacing="0" border="0" 
-                            style="width: 99%; height: auto;">
+                            style="width: 99%; height: auto; font-size:100%;">
                           <tr>
                             <td style="width:3%" valign="top">1.</td>
                             <td style="width:97%; text-align: justify">Si la reticencia o inexactitud no 
-                            fueran de tanta relevancia como las que de ser conocidas por el asegurador, 
-                            éste no incorporaría al asegurado en el contrato de seguro, o de hacerlo, 
-                            lo haría en condiciones distintas.</td>
+                            implica un mayor riesgo, al grado en que torne inaceptable para el Asegurador de acuerdo a sus politicas y criterios técnicos formalmente establecidos o de ser conocido lo admitiria en condiciones distintas.</td>
                           </tr>
                           <tr>
                             <td style="width:3%" valign="top">2.</td>
-                            <td style="width:97%; text-align: justify">Si el asegurador extiende la 
-                            póliza al asegurado sin exigir la Declaración de Salud en relación 
-                            al estado de riesgo.                       
+                            <td style="width:97%; text-align: justify">Si el asegurador otorga cobertura al asegurado con la extensión del certificado de cobertura individual sin exigir la Declaración de Salud en relacion al estado del riesgo.                       
                             </td>
                           </tr>
                           <tr>
@@ -882,40 +974,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                             <td style="width:97%">Si la reticencia o inexactitud no tiene relación con 
                             la producción del siniestro o sus efectos.                        
                             </td>
-                          </tr>
-                          <tr>
-                            <td style="width:3%" valign="top">7.</td>
-                            <td style="width:97%; text-align: justify">La validez de esta póliza y su cobertura
-                            no será discutida después de transcurridos los dos años desde el momento 
-                            de la fecha de desembolso del crédito.
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="width:2%" valign="top">8.</td>
-                            <td style="width:97%; text-align: justify">Si dentro de los dos años desde la 
-                            fecha de desembolso del crédito, el asegurador no ha intentado la impugnación o 
-                            anulación de dicha cobertura por reticencia o inexactitud en las declaraciones del
-                            asegurado, el asegurador pasado dicho plazo, está impedido de pretender
-                            la impugnación o anulabilidad.
-                        </td>
-                          </tr>
-                          <tr>
-                            <td style="width:3%" valign="top">9.</td>
-                            <td style="width:97%; text-align: justify">Por consiguiente, ninguna Declaración
-                            hecha por el asegurado bajo esta póliza relativa a su asegurabilidad, se utilizará 
-                            para impugnar o pretender la anulabilidad de la validez de la cobertura individual
-                            respecto a la cual se hizo tal declaración, después de que la cobertura individual 
-                            del seguro haya estado en vigor durante un periodo de dos años desde el momento del
-                            desembolso de crédito.                        
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style="width:3%" valign="top">10.</td>
-                            <td style="width:97%; text-align: justify">El único motivo por el cual la
-                            Entidad Aseguradora podrá impugnar o pretender  la anulabilidad de la cobertura 
-                            individual pasado el plazo señalado, será por falta de pago de primas.
-                        	</td>
-                          </tr>
+                          </tr>                          
                         </table>                        
                         
                         <br>                      
@@ -956,28 +1015,24 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
      					<br>
                         <span style="font-weight: bold;">PROCEDIMIENTO EN CASO DE SINIESTRO:</span>
                         El asegurado o beneficiario, tan pronto y a más tardar dentro de los treinta (30)
-                        días 	calendario de tener conocimiento del siniestro, deben comunicar tal hecho
+                        días calendario de tener conocimiento del siniestro, deben comunicar tal hecho
                         al asegurador, salvo fuerza mayor o impedimento justificado.
-                        <br>                       
+                        <br>
+                        No se puede invocar retardación u omisión del aviso cuando el asegurador, dentro del 
+                        plazo indicado, intervengan en la comprobación del siniestro al tener conocimiento del 
+                        mismo por cualquier medio.
+                        <br>
                         El asegurador podrá liberarse de sus obligaciones cuando compruebe que el asegurado o
                         beneficiario, según el caso, omita dar el aviso dentro del plazo establecido, con el fin de
-                        impedir la comprobación oportuna de las circunstancias del siniestro o el de la magnitud
-                        de los daños.
-						<br>
-                        A fin de establecer la procedencia o no de la cobertura del siniestro, la información
-                        requerida por el asegurador estará limitada a información y evidencia relacionadas a 
-                        los hechos y circunstancias del siniestro que permitan determinar al asegurador la causa
-                        del siniestro. Toda información requerida por el asegurador que no se encuentre enmarcada
-                        a la limitación establecida, no será considerada para efectos del establecimiento del
-                        derecho del asegurado.
-                        <br>                        
+                        impedir la comprobación oportuna de las circunstancias del siniestro.
+						<br>                        
                         
-                        <span style="font-weight: bold;">Documentación para el pago del Capital Asegurado en
+                        <span style="font-weight: bold;">Documentación para el pago del Siniestro en
                         caso de Muerte del Asegurado:</span>
                         <br><br>
                         
                         
-                        <table 
+<table 
                             cellpadding="0" cellspacing="0" border="0" 
                             style="width: 100%; height: auto; font-size: 100%; 
                                 font-family: Arial;">
@@ -987,32 +1042,38 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                             Oficial de Registro Civil. Si el Asegurado hubiera fallecido fuera del país,
                             el indicado Certificado deberá llevar las legalizaciones correspondientes del 
                             consulado boliviano del país donde hubiera ocurrido el hecho, y el de la autoridad 
-                            competente en territorio del Estado Plurinacional de Bolivia.</td>
+                            competente en territorio del Estado Plurinacional de Bolivia. En casos en que la obtención
+                            del certificado de Defunción fuera dificultosa por ausencia de Oficinas de Registro Civil
+                            en la jurisdicción municipal de domicilio del Asegurado siniestrado o en la jurisdicción 
+                            municipal colindante del municipio donde vive el Asegurado siniestrado, podrá sera aceptada
+                            una certificación extendida por una autoridad comunitaria con la participación de dos personas 
+                            testigos vecinos del Asegurado fallecido.</td>
                           </tr>
                           <tr>
                             <td style="width:3%" valign="top">&nbsp;-&nbsp;</td>
-                            <td style="width:97%; text-align: justify;">Declaración Médica de invalidez, 
-                            emitida por un médico calificador debidamente registrado en la APS, o por el
-                            Instituto Nacional de Salud Ocupacional (INSO).
-                        	</td>
+                            <td style="width:97%; text-align: justify;">Documento de identificación del asegurado.</td>
                           </tr>
                           <tr>
                             <td style="width:3%" valign="top">&nbsp;-&nbsp;</td>
-                            <td style="width:97%; text-align: justify;">Documento de identificación del
-                             asegurado.</td>
+                            <td style="width:97%; text-align: justify;">Formulario de declaración de siniestro o nota 
+                            de denuncia del siniestro.</td>
+                          </tr>
+                          <tr>
+                            <td style="width:3%" valign="top">&nbsp;-&nbsp;</td>
+                            <td style="width:97%; text-align: justify;">Liquidación del crédito.</td>
                           </tr>
                         </table>
                         
                         <br>
                         
-                        <span style="font-weight: bold;">Documentación para el pago del Capital Asegurado 
+                        <span style="font-weight: bold;">Documentación para el pago del Siniestro 
                         en caso de Invalidez Total y Permanente:</span>                      
                         
                         <br><br>
                         
                         <table 
                             cellpadding="0" cellspacing="0" border="0" 
-                            style="width: 100%; height: auto;">
+                            style="width: 100%; height: auto; font-size:100%;">
                           <tr>
                             <td style="width:3%" valign="top">&nbsp;-&nbsp;</td>
                             <td style="width:97%"> Informe detallado del Médico o médicos que hayan tratado
@@ -1022,8 +1083,8 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                           <tr>
                             <td style="width:3%" valign="top">&nbsp;-&nbsp;</td>
                             <td style="width:97%">Declaración Médica de invalidez, emitida por un médico calificador
-                            debidamente registrado en la APS, o por el Instituto Nacional de Salud 
-                            Ocupacional (INSO).
+                            debidamente registrado en la APS, o por el Instituto Nacional de Salud Ocupacional (INSO) 
+                            o la Entidad Encargada de Calificar (EEC).
                         	</td>
                           </tr>
                           <tr>
@@ -1034,7 +1095,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         
                         <br>
                         El asegurador debe pronunciarse sobre el derecho del asegurado o beneficiario
-                        dentro de los treinta (30) días calendario siguientes de recibida la información 
+                        dentro de los veinte (20) días calendario siguientes de recibida la información 
                         y evidencia requeridas. Dicho plazo fenece con la aceptación o rechazo del siniestro
                         o con la solicitud del asegurador al asegurado que se completen los requerimientos y
                         no vuelve a correr hasta que el asegurado haya cumplido con tales requerimientos. La 
@@ -1048,7 +1109,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         de la póliza.
                         <br>
                         Establecido el derecho del asegurado, el asegurador debe pagar la obligación según
-                        el presente contrato, dentro de los quince (15) días calendario siguientes. El asegurador
+                        el presente contrato, dentro de los veinte (20) días calendario siguientes. El asegurador
                         incurre en mora vencido este plazo y procederá el pago adicional de intereses sobre el
                         capital no pagado entre la fecha límite de pago y la fecha de pago efectivo, que se
                         calcularán diariamente aplicando la tasa promedio ponderada del sistema financiero para
@@ -1062,7 +1123,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         
                         <table 
                             cellpadding="0" cellspacing="0" border="0" 
-                            style="width: 100%; height: auto;">
+                            style="width: 100%; height: auto; font-size:100%;">
                           <tr>
                             <td style="width:3%" valign="top">1.</td>
                             <td style="width:97%; text-align: justify">Provoquen dolosamente el siniestro.</td>
@@ -1081,12 +1142,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         </table>
                                                   
                         <br>    
-                                            
-                        En cualquiera de estos casos, el asegurado pierde además el derecho
-                        a la devolución de las primas o valores garantizados, sin perjuicio 
-                        de las sanciones penales.
-                        <br>
-						<span style="font-weight: bold;">CONTROVERSIAS: </span>
+                        <span style="font-weight: bold;">CONTROVERSIAS: </span>
                         Toda controversia de hecho podrá resolverse mediante peritaje. Si por la
                         vía del peritaje no se llegara a un acuerdo sobre la controversia, la misma se
                         definirá por la vía del arbitraje.
@@ -1094,7 +1150,14 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                         Las controversias de derecho suscritas entre las partes sobre la naturaleza 
                         y alcance del contrato de seguro, serán resueltas en única e inapelable 
                         instancia, por la vía del arbitraje, de acuerdo a lo previsto en la Ley 1770 
-                        (Ley de Conciliación y Arbitraje). La Autoridad de Fiscalización y Control de
+                        (Ley de Conciliación y Arbitraje). 
+                        <br>
+                        Las controversias de derecho suscritas entre las partes sobre la naturaleza
+                        y alcance de contrato de seguro, serán resueltas en única e inapelable
+                        instancia, por la vía del arbitraje, de acuerdo a lo previsto en la Ley 1770
+                        (Ley de Conciliación y Arbitraje).
+                        <br>
+                        La Autoridad de Fiscalización y Control de
                         Pensiones y Seguros podrá fungir como instancia de conciliación, para todo el 
                         siniestro cuya cuantía no supere el monto de UFV 100.000,000.- (Cien Mil 00/100 
                         Unidades de Fomento a la Vivienda). Si por esta vía no existiera un acuerdo,
@@ -1245,16 +1308,16 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
             <br><br>
          
         	<table cellpadding="0" cellspacing="0" border="0"
-                  style="width: 100%">
+                  style="width: 100%; font-size:100%">
                   <tr>
-                      <td style="width: 50%; border:1px solid #000;">
+                      <td style="width: 50%; border:1px solid #000;" valign="top">
                           Nombres y Firma Sudamericana
                       </td>
                       <td style="width: 50%; border:1px solid #000; border-left:0px none; ">
                       <br>
-                      Nombre Completo: <?=$regi['nombre']. ' '.$regi['apellidos'];?>
+                      Nombre Completo: <?=$rowDt['nombre']. ' '.$rowDt['paterno']. ' '.$rowDt['materno'];?>
                       <br>
-                      CI: <?=$regi['ci_document'].' '.$regi['extension'];?>
+                      CI: <?=$rowDt['dni']. ' ' .$rowDt['extension'];?>
                       <br><br><br>
                       <span style="font-weight: bold;">Firma del Cliente</span>
                       </td>
@@ -1288,57 +1351,31 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
         </div>        
         
 <?php
-		
- 		   // }//fin emitir
-			
-    	   //if($num_titulares>1){
-		   if ($k < $num_titulares) {
+            }
+
+            if ($k < $nCl) {
 ?>
         <page><div style="page-break-before: always;">&nbsp;</div></page>
 <?php
-            } 
-     } 
-
-  if ($fac === TRUE) {
-		$url .= 'index.php?ms='.md5('MS_DE').'&page='.md5('P_fac').'&ide='.base64_encode($row['id_emision']).'';
-?>
-        <br/>
-        <div style="width:500px; height:auto; padding:10px 15px; font-size:11px; font-weight:bold; text-align:left;">
-            No. de Slip de Cotizaci&oacute;n: <?=$row['no_cotizacion'];?>
-        </div><br>
-        <div style="width:500px; height:auto; padding:10px 15px; border:1px solid #FF2D2D; background:#FF5E5E; color:#FFF; font-size:10px; font-weight:bold; text-align:justify;">
-            Observaciones en la solicitud del seguro:<br><br><?=$reason;?>
-        </div>
-        <div style="width:500px; height:auto; padding:10px 15px; font-size:11px; font-weight:bold; text-align:left;">
-            Para procesar la solicitud ingrese al siguiente link con sus credenciales de usuario:<br>
-            <a href="<?=$url;?>" target="_blank">Procesar caso facultativo</a>
-        </div>
-
-<?php
-  }
-
-  if ($implant === TRUE) {
-		$url .= 'index.php?ms='.md5('MS_DE').'&page='.md5('P_app_imp').'&ide='.base64_encode($row['id_emision']).'';
-?>
-        <br/>
-        <div style="width:500px; height:auto; padding:10px 15px; border:1px solid #00FFFF; background:#9FE0FF; color:#303030; font-size:10px; font-weight:bold; text-align:justify;">
-            Solicitud de Aprobaci&oacute;n: P&oacute;liza: <?=$prefix['prefix'] . '-' . $row['no_emision'];?><br><br>
-        </div>
-        <div style="width:500px; height:auto; padding:10px 15px; font-size:11px; font-weight:bold; text-align:left;">
-            Para procesar la solicitud ingrese al siguiente link con sus credenciales de usuario:<br>
-            <a href="<?=$url;?>" target="_blank">Procesar Solicitud de Aprobaci&oacute;n</a>
-        </div>
-<?php
-  }
+            }
+        }
+    }
 ?>
 
+
+
+        <!--<div style="width: 775px; border: 0px solid #FFFF00; ">
+        </div>
+
+        <div style="width: 775px; border: 0px solid #FFFF00; ">
+        </div>
+
+        <div style="width: 775px; border: 0px solid #FFFF00; ">
+        </div>-->
     </div>
-</div>    
-    
-   
-<?php  
-	$html = ob_get_clean();
-	return $html;
-}//Cierra funcion
-
+</div>
+<?php
+    $html = ob_get_clean();
+    return $html;
+}
 ?>

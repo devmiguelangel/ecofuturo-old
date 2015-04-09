@@ -19,6 +19,8 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 		$ms = $link->real_escape_string(trim($_POST['ms']));
 		$page = $link->real_escape_string(trim($_POST['page']));
 		$pr = $link->real_escape_string(trim($_POST['pr']));
+
+		$id_certificate = $link->getIdCertificate();
 		
 		$max_item = 0;
 		if (($rowDE = $link->get_max_amount_optional($_SESSION['idEF'], 'DE')) !== FALSE) {
@@ -415,7 +417,7 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 					"'.base64_decode($_SESSION['idUser']).'", "", "", FALSE, "", 
 					"'.$dcr_cia.'", '.$dcr_policy.', "'.$dcr_type_mov.'", 
 					'.(int)$FAC.', "'.$fac_reason.'", '.$TASA.', '.$PRIMA.', 
-					0, 0, FALSE, 0);';
+					0, 0, FALSE, "' . $id_certificate . '");';
 					
 					$sqlCL = '';
 					
@@ -651,7 +653,8 @@ if(isset($_POST['flag']) && (isset($_POST['de-idc']) || isset($_POST['de-ide']))
 						tipo_plazo = "'.$dcr_type_term.'", id_poliza = '.$dcr_policy.', 
 						operacion = "'.$dcr_type_mov.'", facultativo = '.(int)$FAC.', 
 						motivo_facultativo = "'.$fac_reason.'", tasa = '.$TASA.', 
-						prima_total = '.$PRIMA.', leido = false, id_certificado = 0
+						prima_total = '.$PRIMA.', leido = false, 
+						id_certificado = "' . $id_certificate . '"
 					where id_emision = "'.$ide.'" ;';
 					
 					$sw_UCl = false;

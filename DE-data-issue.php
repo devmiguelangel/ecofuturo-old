@@ -1079,15 +1079,13 @@ if($rs->data_seek(0) === TRUE){
         		class="not-required fbin <?=$read_new . $read_edit;?>" <?=$read_save;?>>
 				<option value="">Seleccione...</option>
 <?php
-$arr_coverage = array(0 => '2|Individual - Mancomuno');
+$arr_coverage = $link->coverage;
 for($i = 0; $i < count($arr_coverage); $i++){
 	$coverage = explode('|',$arr_coverage[$i]);
 	if($coverage[0] == $cr_coverage) {
-		echo '<option value="' . $coverage[0] . '" selected>' 
-			. $coverage[1].'</option>';
+		echo '<option value="'.$coverage[0].'" selected>'.$coverage[1].'</option>';
 	} else {
-		echo '<option value="' . $coverage[0] . '">' 
-			. $coverage[1] . '</option>';
+		echo '<option value="'.$coverage[0].'">'.$coverage[1].'</option>';
 	}
 }
 ?>

@@ -5,12 +5,18 @@ class SibasDB extends MySQLi
 	private $config, $host, $user, $password, $db, $sql, $rs, $row;
     public static $AGENCY = true;
 
+    private $id_certificate = 0;
+
 	public
 		$product = array(
 					0 => 'DE|Desgravamen', 
 					1 => 'AU|Automotores', 
 					2 => 'TRD|Todo Riesgo Domiciliario',
 					3 => 'TRM|Todo Riesgo Equipo Móvil'),
+		$coverage = array(
+			0 => '1|Individual/Mancomunado',
+			// 1 => '2|Banca Comunal',
+			),
 		$typeTerm = array(
 					0 => 'Y|Años', 
 					1 => 'M|Meses', 
@@ -123,6 +129,12 @@ class SibasDB extends MySQLi
 			die('Error de Conexion (' .mysqli_connect_errno().' ) '.mysqli_connect_error());
 		}
 		
+	}
+
+	public function getIdCertificate()
+	{
+		$this->id_certificate = 2;
+		return $this->id_certificate;
 	}
 
     public static function getAgency ()

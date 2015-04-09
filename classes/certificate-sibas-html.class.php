@@ -30,6 +30,7 @@ require('includes-ce/certificate-TRD-SC.inc.php');
 require('includes-ce/certificate-TRM-SC.inc.php');
 
 require('includes-ce/certificate-DE-PES.inc.php');
+require('includes-ce/certificate-DE-VGC.inc.php');
 
 require('includes-ce/certificate-DE-CP.inc.php');
 require('includes-ce/certificate-AU-CP.inc.php');
@@ -83,6 +84,9 @@ class CertificateHtml{
 		case 'PEC':		//	Slip de Cotización
 			$this->html = $this->get_html_pec();
 			break;
+		case 'VGC':		//	Slip de Cotización
+			$this->html = $this->get_html_vg('C');
+			break;
 		}
 	}
 	
@@ -102,6 +106,22 @@ class CertificateHtml{
 		    return $this->set_html_trm_sc();
 		    break;
 		} 
+	}
+
+	public function get_html_vg($type)
+	{
+		switch ($this->product){
+		case 'DE':
+			switch ($type) {
+			case 'S':
+		    	return $this->set_html_de_vgs();
+				break;
+			case 'C':
+		    	return $this->set_html_de_vgc();
+				break;
+			}
+		    break;
+		}
 	}
 	
 	//SLIP PRODUCTO EXTRA
@@ -192,13 +212,36 @@ class CertificateHtml{
 		return de_pes_certificate($this->cx, $this->rowPo, $this->rsDt, $this->url, 
 									$this->implant, $this->fac, $this->reason);
 	}
+
+	//CERTIFICADO VG
+	private function set_html_de_vgc(){ //DESGRAVAMEN SLIP
+		return de_vgc_certificate($this->cx, $this->rsPo, $this->url);
+	}
 	
 	//CERTIFICADOS EMISIONES
 	private function set_html_de_em() {	//	Desgravamen
+		$GLOBALS['rprint'] = false;
+
+		if (isset($_GET['rp'])) {
+			if ($_GET['rp'] === sha1('rprint')) {
+				$GLOBALS['rprint'] = true;
+			}
+		}
+
 		if ($this->modality === false) {
-			return de_em_certificate($this->cx, $this->rowPo, $this->rsDt, $this->url, $this->implant, $this->fac, $this->reason);
+			switch ((int)$this->rowPo['id_certificado']) {
+			case 1:
+				return de_em_certificate($this->cx, $this->rowPo, $this->rsDt, $this->url, 
+										$this->implant, $this->fac, $this->reason);
+				break;
+			case 2:
+				return de_em_certificate_aps($this->cx, $this->rowPo, $this->rsDt, $this->url, 
+									$this->implant, $this->fac, $this->reason);
+				break;
+			}
 		} else {
-			return de_em_certificate_mo($this->cx, $this->rowPo, $this->rsDt, $this->url, $this->implant, $this->fac, $this->reason, $this->type);
+			return de_em_certificate_mo($this->cx, $this->rowPo, $this->rsDt, $this->url, 
+									$this->implant, $this->fac, $this->reason, $this->type);
 		}
 	}
 	
