@@ -176,15 +176,19 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                     Desde las 00:01 de. <?=date('d/m/Y', strtotime($row['fecha_emision']));?></td>
                     <td style="width: 2%;"></td>
                     <td style="width: 19%; height: 10px; ">CIUDAD:</td>
-                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;"><?=$row['u_departamento'];?></td>
+                    <td style="width: 31%; height: 10px; border-bottom: 1px solid #000;">
+                        <?=$row['u_departamento'];?>
+                    </td>
                 </tr>
             </table>
           </div>
         
           <br>
 
-          <div style="width: 775px; border: 0px solid #FFFF00; font-size: 85%;">
-            EL PRESENTE CERTIFICADO DE COBERTURA INDIVIDUAL TIENE VALIDEZ LEGAL PARA TODA ENTIDAD ASEGURADORA DE SEGUROS DE PERSONAS DEL ESTADO PLURINACIONAL DE BOLIVIA QUE OTORGUE EL SEGURO DE DESGRAVAMEN.<br /><br />
+        <div style="width: 775px; border: 0px solid #FFFF00; font-size: 85%;">
+            EL PRESENTE CERTIFICADO DE COBERTURA INDIVIDUAL TIENE VALIDEZ LEGAL PARA TODA 
+            ENTIDAD ASEGURADORA DE SEGUROS DE PERSONAS DEL ESTADO PLURINACIONAL DE BOLIVIA 
+            QUE OTORGUE EL SEGURO DE DESGRAVAMEN.<br /><br />
             
             <table
                 cellpadding="0" cellspacing="0" border="0"
@@ -197,16 +201,17 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
             </table>
             <br>
 
-            <div style="text-align:justify">La vigencia individual de la cobertura para cada 
-            Asegurado será mensual renovable automáticamente, iniciándose el momento del
-            desembolso del crédito para casos de riesgo normal, y finalizando el momento de la 
-            extincion de la operacion crediticia. Cuando se trate de un caso de riesgo
-            agravado, la entrada en vigencia de al cobertura individual requiera como 
-            condicion adicional la aceptacion del riesgo de la Entidad Aseguradora.<br />
+            <div style="text-align:justify">
+                La vigencia individual de la cobertura para cada 
+                Asegurado será mensual renovable automáticamente, iniciándose el momento del
+                desembolso del crédito para casos de riesgo normal, y finalizando el momento de la 
+                extincion de la operacion crediticia. Cuando se trate de un caso de riesgo
+                agravado, la entrada en vigencia de al cobertura individual requiera como 
+                condicion adicional la aceptacion del riesgo de la Entidad Aseguradora.<br />
             
-            Esta vigencia se interrumpirá en caso de incumplimiento de pago de 
-            la prima correspondiente, treinta días después de la fecha en que debio
-            efectuarse el pago de la prima.
+                Esta vigencia se interrumpirá en caso de incumplimiento de pago de 
+                la prima correspondiente, treinta días después de la fecha en que debio
+                efectuarse el pago de la prima.
             </div>
             <br>
 
@@ -220,7 +225,9 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 </tr>
             </table>
             <br>
-            El Capital Asegurado durante la vigencia de la póliza de seguro de desgravamen es el saldo insoluto de la deuda que mantiene el asegurado con la Entidad de Intermediacion Financiera.
+            El Capital Asegurado durante la vigencia de la póliza de seguro de desgravamen 
+            es el saldo insoluto de la deuda que mantiene el asegurado con la Entidad de 
+            Intermediacion Financiera.
             <br><br>
 
             <table
@@ -265,7 +272,10 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 </tr>
             </table>
             
-            La Entidad Aseguradora otorga el Beneficio de Gastos de Sepelio por fallecimiento del asegurado, bajo los mismos términos y condiciones de la cobertura de falleciemitno por cualquier causa, cuyo capital asegurado es de 1.5 (uno punto cinco) salarios mínimos nacionales.<br><br>
+            La Entidad Aseguradora otorga el Beneficio de Gastos de Sepelio por fallecimiento 
+            del asegurado, bajo los mismos términos y condiciones de la cobertura de 
+            falleciemitno por cualquier causa, cuyo capital asegurado es de 1.5 (uno punto cinco) 
+            salarios mínimos nacionales.<br><br>
 
             <table
                 cellpadding="0" cellspacing="0" border="0"
@@ -279,24 +289,33 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
 
             <br>
 
-            <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; height: auto; font-size: 100%; font-weight: bold; font-family: Arial;">
-              <tr>
-                <td style="width: 25%;"></td>
-                <td style="width: 50%;">
-                    <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; height: auto; font-size: 100%;
-                                    font-weight: bold; font-family: Arial;">
-                        <tr>
-                            <td style="width: 50%; background: #000000; color: #ffffff; text-align: center; border: 1px solid #000;">Fallecimiento</td>
-                            <td style="width: 50%; background: #000000; color: #ffffff; text-align: center; border: 1px solid #000;">Invalidez Total y Permanente</td>
-                        </tr>
-                        <tr>
-                            <td style="width: 50%; font-weight: normal; border: 1px solid #000; border-right: 0 none; text-align: center">Hasta Cumplir los <span style="font-weight: bold;">75</span> años</td>
-                            <td style="width: 50%; font-weight: normal; border: 1px solid #000; border-left: 0 none;  text-align: center;">Hasta Cumplir los <span style="font-weight: bold;">70</span> años</td>
-                        </tr>
-                    </table>
-                </td>
-                <td style="width: 25%;"></td>
-              </tr>
+            <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; height: auto; 
+                font-size: 100%; font-weight: bold; font-family: Arial;">
+                <tr>
+                    <td style="width: 25%;"></td>
+                    <td style="width: 50%;">
+                        <table border="0" cellpadding="0" cellspacing="0" style="width: 100%; height: auto; font-size: 100%;
+                                        font-weight: bold; font-family: Arial;">
+                            <tr>
+                                <td style="width: 50%; background: #000000; color: #ffffff; 
+                                    text-align: center; border: 1px solid #000;">Fallecimiento</td>
+                                <td style="width: 50%; background: #000000; color: #ffffff; 
+                                    text-align: center; border: 1px solid #000;">Invalidez Total y Permanente</td>
+                            </tr>
+                            <tr>
+                                <td style="width: 50%; font-weight: normal; border: 1px solid #000; 
+                                    border-right: 0 none; text-align: center">Hasta Cumplir los 
+                                    <span style="font-weight: bold;">75</span> años
+                                </td>
+                                <td style="width: 50%; font-weight: normal; border: 1px solid #000; 
+                                    border-left: 0 none;  text-align: center;">Hasta Cumplir los 
+                                    <span style="font-weight: bold;">70</span> años
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 25%;"></td>
+                </tr>
             </table>
 
             <br><br>
@@ -310,18 +329,22 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                     </td>
                 </tr>
             </table>            
-            Las primas de este seguro no constituyen hecho generador de tributo según el Art. No. 54 de la Ley de Seguros 1883 del 25 de junio de 1998.<br /><br />
+            Las primas de este seguro no constituyen hecho generador de tributo según el Art. 
+            No. 54 de la Ley de Seguros 1883 del 25 de junio de 1998.<br /><br />
             
             <b>La siguiente información podrá encontrar en su Comprobante de pago de Crédito:
-            	<ol style="list-style-type:circle;">
-                	<li>Nombre de la Entidad Aseguradora que otorga cobertura.</li>
-                    <li>Nombre de su intermediario (Si es que se cuenta con el mismo) quien tiene la obligacion de asesorarlo en relación al presente seguro.</li>
-                    <li>Coberturas y tasas del seguro de desgravamen (precio del seguro)</li>
-                </ol>
-                De no encontrar esta información en su Comprobante de Crédito, agradeceremos consultar con su Entidad de Intermediación Financiera.
+        	<ol style="list-style-type:circle;">
+            	<li>Nombre de la Entidad Aseguradora que otorga cobertura.</li>
+                <li>Nombre de su intermediario (Si es que se cuenta con el mismo) quien 
+                    tiene la obligacion de asesorarlo en relación al presente seguro.</li>
+                <li>Coberturas y tasas del seguro de desgravamen (precio del seguro)</li>
+            </ol>
+                De no encontrar esta información en su Comprobante de Crédito, agradeceremos 
+                consultar con su Entidad de Intermediación Financiera.
             </b>
             <br><br>
-            Lugar y Fecha, <?=$row['u_departamento'] . ', ' . date('d/m/Y', strtotime($row['fecha_emision']));?><br>
+            Lugar y Fecha, <?=$row['u_departamento'] . ', ' 
+                . date('d/m/Y', strtotime($row['fecha_emision']));?><br>
 
 
             <br><br><br><br><br><br><br>
@@ -423,7 +446,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                     <td style="width: 100%; text-align: center; font-size: 100%;
                         font-weight: bold; " colspan="2">                        
                         DECLARACIÓN JURADA DE SALUD SEGURO DE DESGRAVAMEN
-                        </td>
+                    </td>
                 </tr>
             </table>  
                     
@@ -439,7 +462,7 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                 <tr>
                     <td style="width: 13%; height: 10px;">Nombre Completo:</td>
                     <td style="width: 35%; height: 10px; border-bottom: 1px solid #000;">
-                    <?=$rowDt['nombre']. ' '.$rowDt['paterno']. ' '.$rowDt['materno'];?>
+                        <?=$rowDt['nombre']. ' '.$rowDt['paterno']. ' '.$rowDt['materno'];?>
                     </td>
                     <td style="width: 2%;"></td>
                     <td style="width: 14%; height: 10px;">Capital a Asegurar:</td>
@@ -470,16 +493,19 @@ function de_em_certificate_aps($link, $row, $rsDt, $url, $implant, $fac, $reason
                     <td style="width: 2%;"></td>
                     <td style="width: 14%; height: 10px; ">Ocupación principal:</td>
                     <td style="width: 36%; height: 10px; border-bottom: 1px solid #000;">
-                    <?=$rowDt['ocupacion'] . ' - ' . $rowDt['desc_ocupacion'];?>                    </td>
+                        <?=$rowDt['ocupacion'] . ' - ' . $rowDt['desc_ocupacion'];?>
+                    </td>
                 </tr>
                 <tr>
                     <td style="width: 13%; height: 10px;">Estatura:</td>
-                    <!--<td style="width: 35%; height: 10px; border-bottom: 1px solid #000;">
-                      <?=$row['ef_nombre'];?>                    </td>-->
+                    <td style="width: 35%; height: 10px; border-bottom: 1px solid #000;">
+                        <?=$rowDt['estatura'];?> cm.
+                    </td>
                     <td style="width: 2%;"></td>
                     <td style="width: 14%; height: 10px; ">Peso:</td>
-                    <!--<td style="width: 36%; height: 10px; border-bottom: 1px solid #000;">
-                    <?=$rowDt['ocupacion'];?>                    </td>-->
+                    <td style="width: 36%; height: 10px; border-bottom: 1px solid #000;">
+                        <?=$rowDt['peso'];?> kg.
+                    </td>
                 </tr>
             </table>
            
